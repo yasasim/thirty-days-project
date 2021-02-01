@@ -1,0 +1,20 @@
+{
+  "name": "thirty-days-project",
+  "version": "0.1.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": "git+https://github.com/yasasim/thirty-days-project.git",
+  "author": "yasasim",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/yasasim/thirty-days-project/issues"
+  },
+  "homepage": "https://github.com/yasasim/thirty-days-project#readme",
+  "devDependencies": {
+    "@types/node": "12",
+    "typescript": "^4.1.3"
+  }
+}
