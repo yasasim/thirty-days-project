@@ -30,6 +30,11 @@ const FIELD_SIZE = {
   y: 48
 }
 
+const playerPos: Position = {
+  x: 0,
+  y: 0
+}
+
 let frameCounter = 0
 
 const main = () => {
@@ -62,6 +67,7 @@ const updateView = (context: CanvasRenderingContext2D, field: number[]): void =>
   frameCounter++;
   dispBackground(context);
   dispField(context, field);
+  dispPlayer(context, playerPos);
   context.fillStyle = color.black;
   context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.x + 1) * NODE_SIZE.height);
 }
@@ -89,6 +95,12 @@ const dispField = (context: CanvasRenderingContext2D, field: number[]): void => 
     context.fillStyle = value === 0 ? color.green : color.black;
     context.fillRect(NODE_SIZE.width * pos.y, NODE_SIZE.height * pos.x, NODE_SIZE.width, NODE_SIZE.height);
   })
+}
+
+const dispPlayer = (context:CanvasRenderingContext2D ,pos: Position): void => {
+  context.fillStyle = color.blue;
+  context.arc(NODE_SIZE.width * pos.y + NODE_SIZE.width/2, NODE_SIZE.height * pos.x + NODE_SIZE.height/2, (NODE_SIZE.height > NODE_SIZE.width ? NODE_SIZE.width : NODE_SIZE.height) /2, 0, Math.PI * 2);
+  context.fill();
 }
 
 const getPosFromIndex = (index: number): Position => {
