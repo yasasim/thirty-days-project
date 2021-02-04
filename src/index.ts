@@ -1,6 +1,6 @@
 interface Position {
-  row: number,
-  column: number
+  x: number,
+  y: number
 }
 
 const font = {
@@ -16,7 +16,7 @@ const color = {
 }
 
 const CANVAS_SIZE = {
-  height: 640,
+  height: 800,
   width: 960
 }
 
@@ -26,9 +26,11 @@ const NODE_SIZE = {
 }
 
 const FIELD_SIZE = {
-  row: CANVAS_SIZE.height / NODE_SIZE.height,
-  column: CANVAS_SIZE.width / NODE_SIZE.width
+  x: 32,
+  y: 48
 }
+
+let frameCounter = 0
 
 const main = () => {
   console.log("Hello, World!");
@@ -51,36 +53,55 @@ const main = () => {
   context.font = font.message.toString() + "px sans-serif";
 
   const field = makeField();
+
+  setInterval(updateView.bind(null, context, field), 33.333);
+
+}
+
+const updateView = (context: CanvasRenderingContext2D, field: number[]): void => {
+  frameCounter++;
+  dispBackground(context);
   dispField(context, field);
+  context.fillStyle = color.black;
+  context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.x + 1) * NODE_SIZE.height);
 }
 
 const makeField = (): number[] => {
   const field: number[] = [];
 
-  for(let row = 0; row < FIELD_SIZE.row; row++){
-    for(let column = 0; column < FIELD_SIZE.column; column++){
-      field.push(((row % 2) + column) % 2);
+  for(let x = 0; x < FIELD_SIZE.x; x++){
+    for(let y = 0; y < FIELD_SIZE.y; y++){
+      field.push(((x % 2) + y) % 2);
     }
   }
 
   return field;
 }
 
-const dispField = (context: CanvasRenderingContext2D, field: number[]) => {
+const dispBackground = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = color.white;
+  context.fillRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
+}
+
+const dispField = (context: CanvasRenderingContext2D, field: number[]): void => {
   field.map((value, index) => {
     const pos = getPosFromIndex(index);
     context.fillStyle = value === 0 ? color.green : color.black;
-    context.fillRect(NODE_SIZE.width * pos.column, NODE_SIZE.height * pos.row, NODE_SIZE.width, NODE_SIZE.height);
+    context.fillRect(NODE_SIZE.width * pos.y, NODE_SIZE.height * pos.x, NODE_SIZE.width, NODE_SIZE.height);
   })
 }
 
 const getPosFromIndex = (index: number): Position => {
   const pos = {
-    row: Math.floor(index / FIELD_SIZE.column),
-    column: index % FIELD_SIZE.column
+    x: Math.floor(index / FIELD_SIZE.y),
+    y: index % FIELD_SIZE.y
   }
 
   return pos
+}
+
+const getIndexFromPos = (pos: Position): number => {
+  return pos.x * FIELD_SIZE.y + pos.y;
 }
 
 window.onload = main;
