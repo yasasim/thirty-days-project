@@ -35,7 +35,9 @@ const playerPos: Position = {
   y: 0
 }
 
-let frameCounter = 0
+let pressString: string = '';
+
+let frameCounter: number = 0;
 
 const main = () => {
   console.log("Hello, World!");
@@ -49,27 +51,36 @@ const main = () => {
   canvas.height = CANVAS_SIZE.height;
   canvas.width = CANVAS_SIZE.width;
 
-  const context = canvas.getContext("2d");
-  if(!context){
-    alert("cannot get context");
-    throw new Error("cannot get context");
-  }
+  const context = getCanvasRenderingContext2D(canvas);
 
   context.font = font.message.toString() + "px sans-serif";
 
   const field = makeField();
 
-  setInterval(updateView.bind(null, context, field), 33.333);
+  setInterval(updateView.bind(null, field), 33.333);
 
 }
 
-const updateView = (context: CanvasRenderingContext2D, field: number[]): void => {
+const getCanvasRenderingContext2D = (canvas: HTMLCanvasElement): CanvasRenderingContext2D => {
+  const context = canvas.getContext('2d');
+  if(!context){
+    alert("cannot get context");
+    throw new Error("cannot get context");
+  }
+  return context;
+}
+
+const updateView = (field: number[]): void => {
   frameCounter++;
+
+  const canvas = <HTMLCanvasElement>document.getElementById("main");
+  const context = getCanvasRenderingContext2D(canvas);
   dispBackground(context);
   dispField(context, field);
-  dispPlayer(context, playerPos);
+  dispPlayer(context);
   context.fillStyle = color.black;
   context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.x + 1) * NODE_SIZE.height);
+  context.fillText(pressString, 0, (FIELD_SIZE.x + 2) * NODE_SIZE.height);
 }
 
 const makeField = (): number[] => {
@@ -97,10 +108,9 @@ const dispField = (context: CanvasRenderingContext2D, field: number[]): void => 
   })
 }
 
-const dispPlayer = (context:CanvasRenderingContext2D ,pos: Position): void => {
+const dispPlayer = (context:CanvasRenderingContext2D): void => {
   context.fillStyle = color.blue;
-  context.arc(NODE_SIZE.width * pos.y + NODE_SIZE.width/2, NODE_SIZE.height * pos.x + NODE_SIZE.height/2, (NODE_SIZE.height > NODE_SIZE.width ? NODE_SIZE.width : NODE_SIZE.height) /2, 0, Math.PI * 2);
-  context.fill();
+  context.fillRect(NODE_SIZE.width * playerPos.y, NODE_SIZE.height * playerPos.x, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
 }
 
 const getPosFromIndex = (index: number): Position => {
@@ -117,3 +127,25 @@ const getIndexFromPos = (pos: Position): number => {
 }
 
 window.onload = main;
+
+window.addEventListener('keydown', (event) => {
+  switch(event.key) {
+    case 'ArrowUp':
+      pressString += 'U';
+      playerPos.x--;
+      break;
+    case 'ArrowDown':
+      pressString += 'D';
+      playerPos.x++;
+      break;
+    case 'ArrowLeft':
+      pressString += 'L';
+      playerPos.y--;
+      break;
+    case 'ArrowRight':
+      pressString += 'R';
+      playerPos.y++;
+      break;
+  }
+  console.log('player', playerPos);
+})

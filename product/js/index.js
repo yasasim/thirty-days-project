@@ -25,6 +25,7 @@ const playerPos = {
     x: 0,
     y: 0
 };
+let pressString = '';
 let frameCounter = 0;
 const main = () => {
     console.log("Hello, World!");
@@ -35,22 +36,29 @@ const main = () => {
     }
     canvas.height = CANVAS_SIZE.height;
     canvas.width = CANVAS_SIZE.width;
-    const context = canvas.getContext("2d");
+    const context = getCanvasRenderingContext2D(canvas);
+    context.font = font.message.toString() + "px sans-serif";
+    const field = makeField();
+    setInterval(updateView.bind(null, field), 33.333);
+};
+const getCanvasRenderingContext2D = (canvas) => {
+    const context = canvas.getContext('2d');
     if (!context) {
         alert("cannot get context");
         throw new Error("cannot get context");
     }
-    context.font = font.message.toString() + "px sans-serif";
-    const field = makeField();
-    setInterval(updateView.bind(null, context, field), 33.333);
+    return context;
 };
-const updateView = (context, field) => {
+const updateView = (field) => {
     frameCounter++;
+    const canvas = document.getElementById("main");
+    const context = getCanvasRenderingContext2D(canvas);
     dispBackground(context);
     dispField(context, field);
-    dispPlayer(context, playerPos);
+    dispPlayer(context);
     context.fillStyle = color.black;
     context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.x + 1) * NODE_SIZE.height);
+    context.fillText(pressString, 0, (FIELD_SIZE.x + 2) * NODE_SIZE.height);
 };
 const makeField = () => {
     const field = [];
@@ -72,10 +80,9 @@ const dispField = (context, field) => {
         context.fillRect(NODE_SIZE.width * pos.y, NODE_SIZE.height * pos.x, NODE_SIZE.width, NODE_SIZE.height);
     });
 };
-const dispPlayer = (context, pos) => {
+const dispPlayer = (context) => {
     context.fillStyle = color.blue;
-    context.arc(NODE_SIZE.width * pos.y + NODE_SIZE.width / 2, NODE_SIZE.height * pos.x + NODE_SIZE.height / 2, (NODE_SIZE.height > NODE_SIZE.width ? NODE_SIZE.width : NODE_SIZE.height) / 2, 0, Math.PI * 2);
-    context.fill();
+    context.fillRect(NODE_SIZE.width * playerPos.y, NODE_SIZE.height * playerPos.x, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
 };
 const getPosFromIndex = (index) => {
     const pos = {
@@ -88,3 +95,24 @@ const getIndexFromPos = (pos) => {
     return pos.x * FIELD_SIZE.y + pos.y;
 };
 window.onload = main;
+window.addEventListener('keydown', (event) => {
+    switch (event.key) {
+        case 'ArrowUp':
+            pressString += 'U';
+            playerPos.x--;
+            break;
+        case 'ArrowDown':
+            pressString += 'D';
+            playerPos.x++;
+            break;
+        case 'ArrowLeft':
+            pressString += 'L';
+            playerPos.y--;
+            break;
+        case 'ArrowRight':
+            pressString += 'R';
+            playerPos.y++;
+            break;
+    }
+    console.log('player', playerPos);
+});
