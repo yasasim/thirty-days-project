@@ -22,3 +22,8 @@ playerの位置を設定
 ### 02/05
 keyPressイベントを取得
 playerの位置を動かせるように
+
+### 02/06
+playerをclass化
+Map属性を定義
+侵入付加エリアを設定
