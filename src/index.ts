@@ -30,14 +30,69 @@ const FIELD_SIZE = {
   y: 32
 }
 
-const playerPos: Position = {
-  x: 0,
-  y: 0
-}
-
 let pressString: string = '';
 
 let frameCounter: number = 0;
+
+const field = [
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+  0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+  1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
+]
+
+
+class Player {
+  pos: Position;
+
+  constructor (startPos: Position) {
+    this.pos = startPos;
+  }
+
+  moveRight = () => {
+    this.pos.x++;
+  }
+
+  moveLeft = () => {
+    this.pos.x--;
+  }
+
+  moveUp = () => {
+    this.pos.y--;
+  }
+
+  moveDown = () => {
+    this.pos.y++;
+  }
+}
 
 const main = () => {
   console.log("Hello, World!");
@@ -55,9 +110,31 @@ const main = () => {
 
   context.font = font.message.toString() + "px sans-serif";
 
-  const field = makeField();
+  const player = new Player({x: 0, y: 0});
 
-  setInterval(updateView.bind(null, field), 33.333);
+  window.addEventListener('keydown', (event: KeyboardEvent) => {
+    switch(event.key) {
+      case 'ArrowUp':
+        pressString += 'U';
+        player.moveUp();
+        break;
+      case 'ArrowDown':
+        pressString += 'D';
+        player.moveDown();
+        break;
+      case 'ArrowLeft':
+        pressString += 'L';
+        player.moveLeft();
+        break;
+      case 'ArrowRight':
+        pressString += 'R';
+        player.moveRight();
+        break;
+    }
+    console.log('player', player.pos);
+  })
+
+  setInterval(updateView.bind(null, player), 33.333);
 
 }
 
@@ -70,29 +147,39 @@ const getCanvasRenderingContext2D = (canvas: HTMLCanvasElement): CanvasRendering
   return context;
 }
 
-const updateView = (field: number[]): void => {
+const keyDownEvent = (event: KeyboardEvent, player: Player) => {
+    switch(event.key) {
+      case 'ArrowUp':
+        pressString += 'U';
+        player.moveUp;
+        break;
+      case 'ArrowDown':
+        pressString += 'D';
+        player.moveDown;
+        break;
+      case 'ArrowLeft':
+        pressString += 'L';
+        player.moveLeft;
+        break;
+      case 'ArrowRight':
+        pressString += 'R';
+        player.moveRight;
+        break;
+    }
+    console.log('player', player.pos);
+}
+
+const updateView = (player: Player): void => {
   frameCounter++;
 
   const canvas = <HTMLCanvasElement>document.getElementById("main");
   const context = getCanvasRenderingContext2D(canvas);
   dispBackground(context);
-  dispField(context, field);
-  dispPlayer(context);
+  dispField(context);
+  dispPlayer(context, player);
   context.fillStyle = color.black;
   context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
   context.fillText(pressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
-}
-
-const makeField = (): number[] => {
-  const field: number[] = [];
-
-  for(let x = 0; x < FIELD_SIZE.x; x++){
-    for(let y = 0; y < FIELD_SIZE.y; y++){
-      field.push(((x % 2) + y) % 2);
-    }
-  }
-
-  return field;
 }
 
 const dispBackground = (context: CanvasRenderingContext2D) => {
@@ -100,7 +187,7 @@ const dispBackground = (context: CanvasRenderingContext2D) => {
   context.fillRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
 }
 
-const dispField = (context: CanvasRenderingContext2D, field: number[]): void => {
+const dispField = (context: CanvasRenderingContext2D): void => {
   field.map((value, index) => {
     const pos = getPosFromIndex(index);
     context.fillStyle = value === 0 ? color.green : color.black;
@@ -108,9 +195,9 @@ const dispField = (context: CanvasRenderingContext2D, field: number[]): void => 
   })
 }
 
-const dispPlayer = (context:CanvasRenderingContext2D): void => {
+const dispPlayer = (context:CanvasRenderingContext2D, player: Player): void => {
   context.fillStyle = color.blue;
-  context.fillRect(NODE_SIZE.width * playerPos.x, NODE_SIZE.height * playerPos.y, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
+  context.fillRect(NODE_SIZE.width * player.pos.x, NODE_SIZE.height * player.pos.y, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
 }
 
 const getPosFromIndex = (index: number): Position => {
@@ -127,26 +214,3 @@ const getIndexFromPos = (pos: Position): number => {
 }
 
 window.onload = main;
-
-window.addEventListener('keydown', (event) => {
-  switch(event.key) {
-    case 'ArrowUp':
-      pressString += 'U';
-      playerPos.y--;
-      break;
-    case 'ArrowDown':
-      pressString += 'D';
-      playerPos.y++;
-      break;
-    case 'ArrowLeft':
-      pressString += 'L';
-      playerPos.x--;
-      break;
-    case 'ArrowRight':
-      pressString += 'R';
-      playerPos.x++;
-      break;
-  }
-  console.log('player', playerPos);
-})
-
