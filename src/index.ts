@@ -69,6 +69,21 @@ const field = [
   1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0,
 ]
 
+const isMapOver = (pos: Position): boolean => {
+  if(pos.x >= FIELD_SIZE.x) {
+    return true;
+  }
+  if(pos.x < 0) {
+    return true;
+  }
+  if(pos.y >= FIELD_SIZE.y) {
+    return true;
+  }
+  if(pos.y < 0) {
+    return true;
+  }
+  return false;
+}
 
 class Player {
   pos: Position;
@@ -78,18 +93,31 @@ class Player {
   }
 
   moveRight = () => {
+    if (isMapOver({x: this.pos.x + 1, y: this.pos.y})){
+      return;
+    }
     this.pos.x++;
   }
+    
 
   moveLeft = () => {
+    if (isMapOver({x: this.pos.x - 1, y: this.pos.y})){
+      return;
+    }
     this.pos.x--;
   }
 
   moveUp = () => {
+    if (isMapOver({x: this.pos.x, y: this.pos.y - 1})){
+      return;
+    }
     this.pos.y--;
   }
 
   moveDown = () => {
+    if (isMapOver({x: this.pos.x + 1, y: this.pos.y + 1})){
+      return;
+    }
     this.pos.y++;
   }
 }
