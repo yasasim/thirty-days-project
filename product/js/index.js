@@ -19,7 +19,7 @@ const NODE_SIZE = {
 };
 const FIELD_SIZE = {
     x: 32,
-    y: 48
+    y: 32
 };
 const playerPos = {
     x: 0,
@@ -57,8 +57,8 @@ const updateView = (field) => {
     dispField(context, field);
     dispPlayer(context);
     context.fillStyle = color.black;
-    context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.x + 1) * NODE_SIZE.height);
-    context.fillText(pressString, 0, (FIELD_SIZE.x + 2) * NODE_SIZE.height);
+    context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
+    context.fillText(pressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 };
 const makeField = () => {
     const field = [];
@@ -77,41 +77,41 @@ const dispField = (context, field) => {
     field.map((value, index) => {
         const pos = getPosFromIndex(index);
         context.fillStyle = value === 0 ? color.green : color.black;
-        context.fillRect(NODE_SIZE.width * pos.y, NODE_SIZE.height * pos.x, NODE_SIZE.width, NODE_SIZE.height);
+        context.fillRect(NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
     });
 };
 const dispPlayer = (context) => {
     context.fillStyle = color.blue;
-    context.fillRect(NODE_SIZE.width * playerPos.y, NODE_SIZE.height * playerPos.x, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
+    context.fillRect(NODE_SIZE.width * playerPos.x, NODE_SIZE.height * playerPos.y, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
 };
 const getPosFromIndex = (index) => {
     const pos = {
-        x: Math.floor(index / FIELD_SIZE.y),
-        y: index % FIELD_SIZE.y
+        y: Math.floor(index / FIELD_SIZE.x),
+        x: index % FIELD_SIZE.x
     };
     return pos;
 };
 const getIndexFromPos = (pos) => {
-    return pos.x * FIELD_SIZE.y + pos.y;
+    return pos.y * FIELD_SIZE.x + pos.x;
 };
 window.onload = main;
 window.addEventListener('keydown', (event) => {
     switch (event.key) {
         case 'ArrowUp':
             pressString += 'U';
-            playerPos.x--;
+            playerPos.y--;
             break;
         case 'ArrowDown':
             pressString += 'D';
-            playerPos.x++;
+            playerPos.y++;
             break;
         case 'ArrowLeft':
             pressString += 'L';
-            playerPos.y--;
+            playerPos.x--;
             break;
         case 'ArrowRight':
             pressString += 'R';
-            playerPos.y++;
+            playerPos.x++;
             break;
     }
     console.log('player', playerPos);
