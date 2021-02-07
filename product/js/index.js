@@ -112,6 +112,7 @@ const canWalkInto = (pos) => {
 class Player {
     constructor(startPos) {
         this.moveRight = () => {
+            this.angle = 'right';
             const nextPos = {
                 x: this.pos.x + 1,
                 y: this.pos.y
@@ -125,6 +126,7 @@ class Player {
             this.pos = nextPos;
         };
         this.moveLeft = () => {
+            this.angle = 'left';
             const nextPos = {
                 x: this.pos.x - 1,
                 y: this.pos.y
@@ -138,6 +140,7 @@ class Player {
             this.pos = nextPos;
         };
         this.moveUp = () => {
+            this.angle = 'up';
             const nextPos = {
                 x: this.pos.x,
                 y: this.pos.y - 1
@@ -151,6 +154,7 @@ class Player {
             this.pos = nextPos;
         };
         this.moveDown = () => {
+            this.angle = 'down';
             const nextPos = {
                 x: this.pos.x,
                 y: this.pos.y + 1
@@ -164,6 +168,7 @@ class Player {
             this.pos = nextPos;
         };
         this.pos = startPos;
+        this.angle = 'down';
     }
 }
 const main = () => {
@@ -252,10 +257,6 @@ const dispField = (context) => {
         context.fillRect(NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
     });
 };
-const dispPlayer = (context, player) => {
-    context.fillStyle = color.blue;
-    context.fillRect(NODE_SIZE.width * player.pos.x, NODE_SIZE.height * player.pos.y, NODE_SIZE.width * 0.8, NODE_SIZE.height * 0.8);
-};
 const getPosFromIndex = (index) => {
     const pos = {
         y: Math.floor(index / FIELD_SIZE.x),
@@ -264,3 +265,36 @@ const getPosFromIndex = (index) => {
     return pos;
 };
 window.onload = main;
+const dispPlayer = (context, player) => {
+    context.fillStyle = color.blue;
+    const defaultPath = {
+        x: player.pos.x * NODE_SIZE.width,
+        y: player.pos.y * NODE_SIZE.height
+    };
+    context.beginPath();
+    switch (player.angle) {
+        case 'down':
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.9));
+            break;
+        case 'right':
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.8));
+            break;
+        case 'up':
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.9));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.9));
+            break;
+        case 'left':
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.8));
+            break;
+        default:
+            break;
+    }
+    context.fill();
+};
