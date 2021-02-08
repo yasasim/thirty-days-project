@@ -183,6 +183,11 @@ const main = () => {
     const context = getCanvasRenderingContext2D(canvas);
     context.font = font.message.toString() + "px sans-serif";
     const player = new Player({ x: 0, y: 0 });
+    const npcs = [];
+    const npcA = new Player({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 });
+    const npcB = new Player({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 });
+    npcs.push(npcA);
+    npcs.push(npcB);
     window.addEventListener('keydown', (event) => {
         switch (event.key) {
             case 'ArrowUp':
@@ -204,7 +209,7 @@ const main = () => {
         }
         console.log('player', player.pos);
     });
-    setInterval(updateView.bind(null, player), 33.333);
+    setInterval(updateView.bind(null, player, npcs), 33.333);
 };
 const getCanvasRenderingContext2D = (canvas) => {
     const context = canvas.getContext('2d');
@@ -218,30 +223,55 @@ const keyDownEvent = (event, player) => {
     switch (event.key) {
         case 'ArrowUp':
             pressString += 'U';
-            player.moveUp;
+            player.moveUp();
             break;
         case 'ArrowDown':
             pressString += 'D';
-            player.moveDown;
+            player.moveDown();
             break;
         case 'ArrowLeft':
             pressString += 'L';
-            player.moveLeft;
+            player.moveLeft();
             break;
         case 'ArrowRight':
             pressString += 'R';
-            player.moveRight;
+            player.moveRight();
             break;
     }
     console.log('player', player.pos);
 };
-const updateView = (player) => {
+const moveNPC = (npc) => {
+    const rand = getRandomInt(0, 4);
+    switch (rand) {
+        case 0:
+            npc.moveDown();
+            break;
+        case 1:
+            npc.moveLeft();
+            break;
+        case 2:
+            npc.moveRight();
+            break;
+        case 3:
+            npc.moveUp();
+            break;
+    }
+};
+const updateView = (player, npcs) => {
     frameCounter++;
     const canvas = document.getElementById("main");
     const context = getCanvasRenderingContext2D(canvas);
+    if (frameCounter % 15 === 0) {
+        npcs.map((value) => {
+            moveNPC(value);
+        });
+    }
     dispBackground(context);
     dispField(context);
-    dispPlayer(context, player);
+    dispPlayer(context, player, color.blue);
+    npcs.map((value) => {
+        dispPlayer(context, value, color.red);
+    });
     context.fillStyle = color.black;
     context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
     context.fillText(pressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
@@ -265,8 +295,8 @@ const getPosFromIndex = (index) => {
     return pos;
 };
 window.onload = main;
-const dispPlayer = (context, player) => {
-    context.fillStyle = color.blue;
+const dispPlayer = (context, player, color) => {
+    context.fillStyle = color;
     const defaultPath = {
         x: player.pos.x * NODE_SIZE.width,
         y: player.pos.y * NODE_SIZE.height
@@ -297,4 +327,7 @@ const dispPlayer = (context, player) => {
             break;
     }
     context.fill();
+};
+const getRandomInt = (min, max) => {
+    return Math.floor(Math.random() * max + min);
 };
