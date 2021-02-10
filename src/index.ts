@@ -10,11 +10,13 @@ interface FieldStatus {
 
 type Angle = 'up' | 'right' | 'down' | 'left'
 
-const font = {
+const DEBUG_MODE = false;
+
+const FONT = {
   message: 20
 }
 
-const color = {
+const COLOR = {
   red: 'rgb(255,00,00)',
   green: 'rgb(00,255,00)',
   lightGreen: 'rgb(144,238,144)',
@@ -27,27 +29,27 @@ const color = {
 }
 
 const FIELD_GRASS: FieldStatus = {
-  color: color.lightGreen,
+  color: COLOR.lightGreen,
   byWalk: true
 }
 
 const FIELD_TREE: FieldStatus = {
-  color: color.green,
+  color: COLOR.green,
   byWalk: true
 }
 
 const FIELD_MOUNTAIN: FieldStatus = {
-  color: color.gray,
+  color: COLOR.gray,
   byWalk: false
 }
 
 const FIELD_SEA: FieldStatus = {
-  color: color.azur,
+  color: COLOR.azur,
   byWalk: false
 }
 
 const FIELD_SAND: FieldStatus = {
-  color: color.sand,
+  color: COLOR.sand,
   byWalk: true
 }
 
@@ -74,11 +76,28 @@ const FIELD_SIZE = {
   y: 32
 }
 
-let pressString: string = '';
+const SCENE = {
+  moveMap: 0,
+  battle: 1
+}
 
-let frameCounter: number = 0;
+const PLAYER_ID = -1;
 
-const field = [
+const EMPTY = 0;
+
+let gPressString: string = '';
+
+let gFrameCounter: number = 0;
+
+let gScene = 0;
+
+let gBattlePos: Position;
+
+let gBattleEnemyId: number;
+
+const gNPCs: Player[] = [] ;
+
+const gMap = [
   0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
   0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -113,39 +132,39 @@ const field = [
   3, 3, 3, 3, 3, 3, 3, 3, 3, 0, 0, 0, 0, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4,
 ];
 
-const playerField = [
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+const gPlayerField = [
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
 ]
 
 const getIndexFromPos = (pos: Position): number => {
@@ -169,21 +188,47 @@ const isMapOver = (pos: Position): boolean => {
 }
 
 const canWalkInto = (pos: Position): boolean => {
-  return FIELDS[field[getIndexFromPos(pos)]].byWalk;
+  return FIELDS[gMap[getIndexFromPos(pos)]].byWalk;
 }
 
 const checkCollision = (pos: Position): boolean => {
-  return playerField[getIndexFromPos(pos)] === 1;
+  return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
+}
+
+const startBattle = (pos: Position) => {
+  gScene = SCENE.battle;
+  gBattlePos = pos;
+  gBattleEnemyId = gPlayerField[getIndexFromPos(pos)];
 }
 
 class Player {
   pos: Position;
   angle: Angle;
+  playerId: number;
 
-  constructor (startPos: Position) {
+  constructor (startPos: Position, playerId: number) {
     this.pos = startPos;
     this.angle = 'down';
-    playerField[getIndexFromPos(startPos)] = 1;
+    this.playerId = playerId;
+    gPlayerField[getIndexFromPos(startPos)] = playerId;
+  }
+
+  moveExecute = (pos: Position) => {
+    if (isMapOver(pos)){
+      return;
+    }
+    if (!canWalkInto(pos)){
+      return;
+    }
+    if (checkCollision(pos)){
+      if ( this.playerId != PLAYER_ID ){
+        return;
+      }
+      startBattle(pos);
+    }
+    gPlayerField[getIndexFromPos(this.pos)] = EMPTY;
+    this.pos = pos;
+    gPlayerField[getIndexFromPos(this.pos)] = this.playerId;
   }
 
   moveRight = () => {
@@ -192,18 +237,7 @@ class Player {
       x: this.pos.x + 1,
       y: this.pos.y
     };
-    if (isMapOver(nextPos)){
-      return;
-    }
-    if (!canWalkInto(nextPos)){
-      return;
-    }
-    if (checkCollision(nextPos)){
-      return;
-    }
-    playerField[getIndexFromPos(this.pos)] = 0;
-    this.pos = nextPos;
-    playerField[getIndexFromPos(this.pos)] = 1;
+    this.moveExecute(nextPos);
   }
 
   moveLeft = () => {
@@ -212,18 +246,7 @@ class Player {
       x: this.pos.x - 1,
       y: this.pos.y
     };
-    if (isMapOver(nextPos)){
-      return;
-    }
-    if (!canWalkInto(nextPos)){
-      return;
-    }
-    if (checkCollision(nextPos)){
-      return;
-    }
-    playerField[getIndexFromPos(this.pos)] = 0;
-    this.pos = nextPos;
-    playerField[getIndexFromPos(this.pos)] = 1;
+    this.moveExecute(nextPos);
   }
 
   moveUp = () => {
@@ -232,18 +255,7 @@ class Player {
       x: this.pos.x,
       y: this.pos.y - 1
     };
-    if (isMapOver(nextPos)){
-      return;
-    }
-    if (!canWalkInto(nextPos)){
-      return;
-    }
-    if (checkCollision(nextPos)){
-      return;
-    }
-    playerField[getIndexFromPos(this.pos)] = 0;
-    this.pos = nextPos;
-    playerField[getIndexFromPos(this.pos)] = 1;
+    this.moveExecute(nextPos);
   }
 
   moveDown = () => {
@@ -252,18 +264,11 @@ class Player {
       x: this.pos.x,
       y: this.pos.y + 1
     };
-    if (isMapOver(nextPos)){
-      return;
-    }
-    if (!canWalkInto(nextPos)){
-      return;
-    }
-    if (checkCollision(nextPos)){
-      return;
-    }
-    playerField[getIndexFromPos(this.pos)] = 0;
-    this.pos = nextPos;
-    playerField[getIndexFromPos(this.pos)] = 1;
+    this.moveExecute(nextPos);
+  }
+
+  getId = () => {
+    return this.playerId;
   }
 }
 
@@ -281,38 +286,24 @@ const main = () => {
 
   const context = getCanvasRenderingContext2D(canvas);
 
-  context.font = font.message.toString() + "px sans-serif";
+  context.font = FONT.message.toString() + "px sans-serif";
 
-  const player = new Player({x: 0, y: 0});
-  const npcs: Player[] = [];
-  const npcA = new Player({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1});
-  const npcB = new Player({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2});
-  npcs.push(npcA);
-  npcs.push(npcB);
+  const player = new Player({x: 0, y: 0}, PLAYER_ID);
+  gNPCs.push(new Player({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, 1));
+  gNPCs.push(new Player({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, 2));
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
-    switch(event.key) {
-      case 'ArrowUp':
-        pressString += 'U';
-        player.moveUp();
+    switch (gScene) {
+      case SCENE.moveMap:
+        playerMoveEvent(event, player);
         break;
-      case 'ArrowDown':
-        pressString += 'D';
-        player.moveDown();
-        break;
-      case 'ArrowLeft':
-        pressString += 'L';
-        player.moveLeft();
-        break;
-      case 'ArrowRight':
-        pressString += 'R';
-        player.moveRight();
+      case SCENE.battle:
+        battleEvent();
         break;
     }
-    console.log('player', player.pos);
   })
 
-  setInterval(updateView.bind(null, player, npcs), 33.333);
+  setInterval(updateView.bind(null, player), 33.333);
 
 }
 
@@ -325,80 +316,108 @@ const getCanvasRenderingContext2D = (canvas: HTMLCanvasElement): CanvasRendering
   return context;
 }
 
-const keyDownEvent = (event: KeyboardEvent, player: Player) => {
+const playerMoveEvent = (event: KeyboardEvent, player: Player) => {
     switch(event.key) {
       case 'ArrowUp':
-        pressString += 'U';
+        gPressString += 'U';
         player.moveUp();
         break;
       case 'ArrowDown':
-        pressString += 'D';
+        gPressString += 'D';
         player.moveDown();
         break;
       case 'ArrowLeft':
-        pressString += 'L';
+        gPressString += 'L';
         player.moveLeft();
         break;
       case 'ArrowRight':
-        pressString += 'R';
+        gPressString += 'R';
         player.moveRight();
         break;
     }
     console.log('player', player.pos);
 }
 
-const moveNPC = (npc: Player) => {
-  const rand = getRandomInt(0, 4);
-  switch(rand) {
-    case 0:
-      npc.moveDown();
-      break;
-    case 1:
-      npc.moveLeft();
-      break;
-    case 2:
-      npc.moveRight();
-      break;
-    case 3:
-      npc.moveUp();
-      break;
-  }
+const battleEvent = () => {
+  gScene = SCENE.moveMap;
+  gNPCs.splice(gNPCs.findIndex((value) => {return value.getId() === gBattleEnemyId}), 1);
+  gPlayerField[getIndexFromPos(gBattlePos)] = PLAYER_ID;
 }
 
-const updateView = (player: Player, npcs: Player[]): void => {
-  frameCounter++;
+const updateView = (player: Player): void => {
+  gFrameCounter++;
 
   const canvas = <HTMLCanvasElement>document.getElementById("main");
   const context = getCanvasRenderingContext2D(canvas);
 
-  if(frameCounter % 15 === 0){
-    npcs.map((value) => {
-      moveNPC(value);
-    });
+  dispBackground(context);
+
+  switch(gScene) {
+    case SCENE.moveMap:
+      moveNPCs();
+      dispMoveMapScene(context, player);
+      break;
+    case SCENE.battle:
+      dispBattleScene(context);
+      break;
   }
 
-  dispBackground(context);
-  dispField(context);
-  dispPlayer(context, player, color.blue);
-  npcs.map((value) => {
-    dispPlayer(context, value, color.red);
-  });
+  context.fillStyle = COLOR.black;
+  context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
+  context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
+}
 
-  context.fillStyle = color.black;
-  context.fillText(`frame: ${frameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
-  context.fillText(pressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
+const moveNPCs = () => {
+  if(gFrameCounter % 15 === 0){
+    gNPCs.map((value) => {
+      const rand = getRandomInt(0, 4);
+      switch(rand) {
+        case 0:
+          value.moveDown();
+          break;
+        case 1:
+          value.moveLeft();
+          break;
+        case 2:
+          value.moveRight();
+          break;
+        case 3:
+          value.moveUp();
+          break;
+      }
+    });
+  }
+}
+
+const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => {
+  dispField(context);
+  dispPlayer(context, player, COLOR.blue);
+  gNPCs.map((value) => {
+    dispPlayer(context, value, COLOR.red);
+  });
+}
+
+const dispBattleScene = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = COLOR.black;
+  context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+  context.fillStyle = COLOR.white;
+  context.fillText('Press Enter' ,NODE_SIZE.width * 1, NODE_SIZE.height * (FIELD_SIZE.y - 4))
 }
 
 const dispBackground = (context: CanvasRenderingContext2D) => {
-  context.fillStyle = color.white;
+  context.fillStyle = COLOR.white;
   context.fillRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
 }
 
 const dispField = (context: CanvasRenderingContext2D): void => {
-  field.map((value, index) => {
+  gMap.map((value, index) => {
     const pos = getPosFromIndex(index);
     context.fillStyle = FIELDS[value].color;
     context.fillRect(NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
+    if(DEBUG_MODE) {
+      context.fillStyle = COLOR.white;
+      context.fillText(gPlayerField[index].toString(), NODE_SIZE.width * pos.x, NODE_SIZE.height * (pos.y + 1))
+    }
   })
 }
 
