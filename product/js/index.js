@@ -1,5 +1,5 @@
 "use strict";
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 const FONT = {
     message: 20
 };
@@ -57,7 +57,7 @@ const SCENE = {
     moveMap: 0,
     battle: 1
 };
-const PLAYER_ID = -1;
+const PLAYER_ID = 1;
 const EMPTY = 0;
 const BATTLE_TEXT_FIELD = {
     commandField: {
@@ -81,6 +81,9 @@ const BATTLE_TEXT_FIELD = {
         left: 0.5
     }
 };
+const RV_BATTLE_START = 2;
+const RV_CANNOT_MOVE = -1;
+const RV_MOVE_EXECUTE = 1;
 let gPressString = '';
 let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
@@ -88,7 +91,7 @@ const gUsableBattleCommand = [
     'たたかう',
     'にげる'
 ];
-const gNPCs = [];
+const gPlayers = [];
 let gBattle = null;
 const gMap = [
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -182,28 +185,30 @@ const canWalkInto = (pos) => {
 const checkCollision = (pos) => {
     return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 };
-const startBattle = (pos) => {
+const startBattle = (pos, player) => {
     gScene = SCENE.battle;
-    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand);
+    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player);
 };
 class Player {
     constructor(startPos, playerId) {
         this.moveExecute = (pos) => {
             if (isMapOver(pos)) {
-                return;
+                return RV_CANNOT_MOVE;
             }
             if (!canWalkInto(pos)) {
-                return;
+                return RV_CANNOT_MOVE;
             }
             if (checkCollision(pos)) {
                 if (this.playerId != PLAYER_ID) {
-                    return;
+                    return RV_CANNOT_MOVE;
                 }
-                startBattle(pos);
+                startBattle(pos, gPlayers[PLAYER_ID]);
+                return RV_BATTLE_START;
             }
             gPlayerField[getIndexFromPos(this.pos)] = EMPTY;
             this.pos = pos;
             gPlayerField[getIndexFromPos(this.pos)] = this.playerId;
+            return RV_MOVE_EXECUTE;
         };
         this.moveRight = () => {
             this.angle = 'right';
@@ -211,7 +216,7 @@ class Player {
                 x: this.pos.x + 1,
                 y: this.pos.y
             };
-            this.moveExecute(nextPos);
+            return this.moveExecute(nextPos);
         };
         this.moveLeft = () => {
             this.angle = 'left';
@@ -219,7 +224,7 @@ class Player {
                 x: this.pos.x - 1,
                 y: this.pos.y
             };
-            this.moveExecute(nextPos);
+            return this.moveExecute(nextPos);
         };
         this.moveUp = () => {
             this.angle = 'up';
@@ -227,7 +232,7 @@ class Player {
                 x: this.pos.x,
                 y: this.pos.y - 1
             };
-            this.moveExecute(nextPos);
+            return this.moveExecute(nextPos);
         };
         this.moveDown = () => {
             this.angle = 'down';
@@ -235,10 +240,10 @@ class Player {
                 x: this.pos.x,
                 y: this.pos.y + 1
             };
-            this.moveExecute(nextPos);
+            return this.moveExecute(nextPos);
         };
         this.moveToPos = (pos) => {
-            this.moveExecute(pos);
+            return this.moveExecute(pos);
         };
         this.getId = () => {
             return this.playerId;
@@ -250,7 +255,7 @@ class Player {
     }
 }
 class Battle {
-    constructor(pos, enemyId, battleCommand) {
+    constructor(pos, enemyId, battleCommand, player) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = 0;
         this.inputEvent = (event) => {
@@ -313,18 +318,26 @@ class Battle {
         };
         this.battleEndEvent = () => {
             gScene = SCENE.moveMap;
-            this.removeEnemy();
-            console.log(this.battlePos);
-            //    gPlayerField[getIndexFromPos(this.battlePos)] = PLAYER_ID;
+            // this.removeEnemy();
+            // gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+            // this.player.moveToPos(this.battlePos);
         };
         this.removeEnemy = () => {
-            gNPCs.splice(gNPCs.findIndex((value) => {
+            const index = gPlayers.findIndex((value) => {
+                console.log(`${value.getId()}, ${this.battleEnemyId}`);
+                console.log(value.getId() === this.battleEnemyId);
                 return value.getId() === this.battleEnemyId;
-            }), 1);
+            });
+            if (index === -1) {
+                return;
+            }
+            console.log(index);
+            gPlayers.splice(index, 1);
         };
         this.battlePos = pos;
         this.battleEnemyId = enemyId;
         this.battleCommand = battleCommand;
+        this.player = player;
     }
 }
 const main = () => {
@@ -339,8 +352,8 @@ const main = () => {
     const context = getCanvasRenderingContext2D(canvas);
     context.font = FONT.message.toString() + "px sans-serif";
     const player = new Player({ x: 0, y: 0 }, PLAYER_ID);
-    gNPCs.push(new Player({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 }, 1));
-    gNPCs.push(new Player({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 }, 2));
+    gPlayers.push(new Player({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 }, 2));
+    gPlayers.push(new Player({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 }, 3));
     window.addEventListener('keydown', (event) => {
         switch (gScene) {
             case SCENE.moveMap:
@@ -362,23 +375,34 @@ const getCanvasRenderingContext2D = (canvas) => {
     return context;
 };
 const playerMoveEvent = (event, player) => {
+    let retval;
+    let nextPos;
     switch (event.key) {
         case 'ArrowUp':
             gPressString += 'U';
-            player.moveUp();
+            nextPos = { x: player.pos.x, y: player.pos.y - 1 };
+            retval = player.moveUp();
             break;
         case 'ArrowDown':
             gPressString += 'D';
-            player.moveDown();
+            nextPos = { x: player.pos.x, y: player.pos.y + 1 };
+            retval = player.moveDown();
             break;
         case 'ArrowLeft':
             gPressString += 'L';
-            player.moveLeft();
+            nextPos = { x: player.pos.x - 1, y: player.pos.y };
+            retval = player.moveLeft();
             break;
         case 'ArrowRight':
             gPressString += 'R';
-            player.moveRight();
+            nextPos = { x: player.pos.x + 1, y: player.pos.y };
+            retval = player.moveRight();
             break;
+        default:
+            return;
+    }
+    if (retval === RV_BATTLE_START) {
+        startBattle(nextPos, player);
     }
     console.log('player', player.pos);
 };
@@ -411,7 +435,7 @@ const updateView = (player) => {
 };
 const moveNPCs = () => {
     if (gFrameCounter % 15 === 0) {
-        gNPCs.map((value) => {
+        gPlayers.map((value) => {
             const rand = getRandomInt(0, 4);
             switch (rand) {
                 case 0:
@@ -433,7 +457,7 @@ const moveNPCs = () => {
 const dispMoveMapScene = (context, player) => {
     dispField(context);
     dispPlayer(context, player, COLOR.blue);
-    gNPCs.map((value) => {
+    gPlayers.map((value) => {
         dispPlayer(context, value, COLOR.red);
     });
 };
