@@ -1,5 +1,5 @@
 "use strict";
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 const FONT = {
     message: 20
 };
@@ -59,11 +59,37 @@ const SCENE = {
 };
 const PLAYER_ID = -1;
 const EMPTY = 0;
+const BATTLE_TEXT_FIELD = {
+    commandField: {
+        height: 8,
+        width: 6
+    },
+    skillField: {
+        height: 8,
+        width: 18
+    },
+    textNode: {
+        height: 1.5,
+        width: 5
+    },
+    margin: {
+        left: 1,
+        bottom: 1
+    },
+    padding: {
+        top: 0.5,
+        left: 0.5
+    }
+};
 let gPressString = '';
 let gFrameCounter = 0;
-let gScene = 0;
+let gScene = SCENE.battle;
 let gBattlePos;
 let gBattleEnemyId;
+const gUsableBattleCommand = [
+    'たたかう',
+    'にげる'
+];
 const gNPCs = [];
 const gMap = [
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -331,8 +357,32 @@ const dispMoveMapScene = (context, player) => {
 const dispBattleScene = (context) => {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+    dispBattleTextField(context);
+    dispBattleCommand(context);
+};
+const dispBattleTextField = (context) => {
+    context.strokeStyle = COLOR.white;
+    roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height, NODE_SIZE.height / 2);
+    roundedRect(context, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height, NODE_SIZE.height / 2);
+};
+const dispBattleCommand = (context) => {
     context.fillStyle = COLOR.white;
-    context.fillText('Press Enter', NODE_SIZE.width * 1, NODE_SIZE.height * (FIELD_SIZE.y - 4));
+    gUsableBattleCommand.map((value, index) => {
+        context.fillText('→' + value, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
+    });
+};
+const roundedRect = (context, x, y, width, height, radius) => {
+    context.beginPath();
+    context.moveTo(x, y + radius);
+    context.lineTo(x, y + height - radius);
+    context.arcTo(x, y + height, x + radius, y + height, radius);
+    context.lineTo(x + width - radius, y + height);
+    context.arcTo(x + width, y + height, x + width, y + height - radius, radius);
+    context.lineTo(x + width, y + radius);
+    context.arcTo(x + width, y, x + width - radius, y, radius);
+    context.lineTo(x + radius, y);
+    context.arcTo(x, y, x, y + radius, radius);
+    context.stroke();
 };
 const dispBackground = (context) => {
     context.fillStyle = COLOR.white;
