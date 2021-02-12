@@ -112,11 +112,7 @@ let gPressString: string = '';
 
 let gFrameCounter: number = 0;
 
-let gScene = SCENE.battle;
-
-let gBattlePos: Position;
-
-let gBattleEnemyId: number;
+let gScene = SCENE.moveMap;
 
 const gUsableBattleCommand = [
   'たたかう',
@@ -124,6 +120,8 @@ const gUsableBattleCommand = [
 ]
 
 const gNPCs: Player[] = [] ;
+
+let gBattle: Battle | null = null;
 
 const gMap = [
   0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -225,8 +223,7 @@ const checkCollision = (pos: Position): boolean => {
 
 const startBattle = (pos: Position) => {
   gScene = SCENE.battle;
-  gBattlePos = pos;
-  gBattleEnemyId = gPlayerField[getIndexFromPos(pos)];
+  gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand);
 }
 
 class Player {
@@ -300,6 +297,117 @@ class Player {
   }
 }
 
+class Battle {
+  private battlePos: Position;
+  private battleEnemyId: number;
+  private battleCommand: string[];
+  private battleCommandCursorPos: number = 0;
+  private battlePhese: number = 0;
+
+  constructor (pos: Position, enemyId: number, battleCommand: string[]) {
+    this.battlePos = pos;
+    this.battleEnemyId = enemyId;
+    this.battleCommand = battleCommand;
+  }
+
+  inputEvent = (event: KeyboardEvent) => {
+    switch(this.battlePhese){
+      case 0:
+        this.readBattleStartMessage(event);
+      case 1:
+        this.chooseBattleCommand(event);
+      case 2:
+        this.readBattleEndMessage(event);
+    }
+  }
+
+  private readBattleStartMessage = (event: KeyboardEvent) => {
+    this.battlePhese = 1;
+  }
+
+  private chooseBattleCommand = (event: KeyboardEvent) => {
+    switch(event.key) {
+      case 'ArrowUp':
+        gPressString += 'U';
+        if(this.battleCommandCursorPos > 0) {
+          this.battleCommandCursorPos--;
+        }
+        break;
+      case 'ArrowDown':
+        gPressString += 'D';
+        if(this.battleCommandCursorPos < this.battleCommand.length){
+          this.battleCommandCursorPos++;
+        }
+        break;
+      case 'Enter':
+        this.battlePhese = 2;
+        break;
+    }
+  }
+
+  private readBattleEndMessage = (event: KeyboardEvent) => {
+    this.battlePhese = 0;
+  }
+
+  dispBattleScene = (context: CanvasRenderingContext2D) => {
+    context.fillStyle = COLOR.black;
+    context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+    this.dispBattleTextField(context);
+    this.dispBattleCommand(context);
+  }
+
+  private dispBattleTextField = (context: CanvasRenderingContext2D) => {
+    context.strokeStyle = COLOR.white;
+    roundedRect(
+      context,
+      NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left,
+      NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom),
+      NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width,
+      NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height,
+      NODE_SIZE.height / 2
+    );
+    roundedRect(
+      context,
+      NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width),
+      NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom),
+      NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width,
+      NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height,
+      NODE_SIZE.height / 2
+    );
+  }
+
+  private dispBattleCommand = (context: CanvasRenderingContext2D) => {
+    context.fillStyle = COLOR.white;
+    gUsableBattleCommand.map((value, index) => {
+      context.fillText(
+        '→' + value,
+        NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left),
+        NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
+    })
+  }
+  
+  getBattlePos = () => {
+    return this.battlePos;
+  }
+
+  getBattleEnemyId = () => {
+    return this.battleEnemyId;
+  }
+
+  battleEndEvent = () => {
+    gScene = SCENE.moveMap;
+    this.removeEnemy();
+    console.log(this.battlePos);
+//    gPlayerField[getIndexFromPos(this.battlePos)] = PLAYER_ID;
+  }
+
+  private removeEnemy = () => {
+    gNPCs.splice(gNPCs.findIndex((value) => {
+      return value.getId() === this.battleEnemyId
+    }), 1);
+  }
+}
+
 const main = () => {
   console.log("Hello, World!");
   const canvas = <HTMLCanvasElement>document.getElementById("main");
@@ -367,9 +475,10 @@ const playerMoveEvent = (event: KeyboardEvent, player: Player) => {
 }
 
 const battleEvent = () => {
-  gScene = SCENE.moveMap;
-  gNPCs.splice(gNPCs.findIndex((value) => {return value.getId() === gBattleEnemyId}), 1);
-  gPlayerField[getIndexFromPos(gBattlePos)] = PLAYER_ID;
+  if(!gBattle){
+    return;
+  }
+  gBattle.battleEndEvent();
 }
 
 const updateView = (player: Player): void => {
@@ -386,7 +495,10 @@ const updateView = (player: Player): void => {
       dispMoveMapScene(context, player);
       break;
     case SCENE.battle:
-      dispBattleScene(context);
+      if(!gBattle){
+        break;
+      }
+      gBattle.dispBattleScene(context);
       break;
   }
 
@@ -423,43 +535,6 @@ const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => 
   gNPCs.map((value) => {
     dispPlayer(context, value, COLOR.red);
   });
-}
-
-const dispBattleScene = (context: CanvasRenderingContext2D) => {
-  context.fillStyle = COLOR.black;
-  context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
-  dispBattleTextField(context);
-  dispBattleCommand(context);
-}
-
-const dispBattleTextField = (context: CanvasRenderingContext2D) => {
-  context.strokeStyle = COLOR.white;
-  roundedRect(
-    context,
-    NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left,
-    NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom),
-    NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width,
-    NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height,
-    NODE_SIZE.height / 2
-  );
-  roundedRect(
-    context,
-    NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width),
-    NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom),
-    NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width,
-    NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height,
-    NODE_SIZE.height / 2
-  );
-}
-
-const dispBattleCommand = (context: CanvasRenderingContext2D) => {
-  context.fillStyle = COLOR.white;
-  gUsableBattleCommand.map((value, index) => {
-    context.fillText(
-      '→' + value,
-      NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left),
-      NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
-  })
 }
 
 const roundedRect = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {

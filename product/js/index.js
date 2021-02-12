@@ -83,14 +83,13 @@ const BATTLE_TEXT_FIELD = {
 };
 let gPressString = '';
 let gFrameCounter = 0;
-let gScene = SCENE.battle;
-let gBattlePos;
-let gBattleEnemyId;
+let gScene = SCENE.moveMap;
 const gUsableBattleCommand = [
     'たたかう',
     'にげる'
 ];
 const gNPCs = [];
+let gBattle = null;
 const gMap = [
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -185,8 +184,7 @@ const checkCollision = (pos) => {
 };
 const startBattle = (pos) => {
     gScene = SCENE.battle;
-    gBattlePos = pos;
-    gBattleEnemyId = gPlayerField[getIndexFromPos(pos)];
+    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand);
 };
 class Player {
     constructor(startPos, playerId) {
@@ -248,6 +246,84 @@ class Player {
         gPlayerField[getIndexFromPos(startPos)] = playerId;
     }
 }
+class Battle {
+    constructor(pos, enemyId, battleCommand) {
+        this.battleCommandCursorPos = 0;
+        this.battlePhese = 0;
+        this.inputEvent = (event) => {
+            switch (this.battlePhese) {
+                case 0:
+                    this.readBattleStartMessage(event);
+                case 1:
+                    this.chooseBattleCommand(event);
+                case 2:
+                    this.readBattleEndMessage(event);
+            }
+        };
+        this.readBattleStartMessage = (event) => {
+            this.battlePhese = 1;
+        };
+        this.chooseBattleCommand = (event) => {
+            switch (event.key) {
+                case 'ArrowUp':
+                    gPressString += 'U';
+                    if (this.battleCommandCursorPos > 0) {
+                        this.battleCommandCursorPos--;
+                    }
+                    break;
+                case 'ArrowDown':
+                    gPressString += 'D';
+                    if (this.battleCommandCursorPos < this.battleCommand.length) {
+                        this.battleCommandCursorPos++;
+                    }
+                    break;
+                case 'Enter':
+                    this.battlePhese = 2;
+                    break;
+            }
+        };
+        this.readBattleEndMessage = (event) => {
+            this.battlePhese = 0;
+        };
+        this.dispBattleScene = (context) => {
+            context.fillStyle = COLOR.black;
+            context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+            this.dispBattleTextField(context);
+            this.dispBattleCommand(context);
+        };
+        this.dispBattleTextField = (context) => {
+            context.strokeStyle = COLOR.white;
+            roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height, NODE_SIZE.height / 2);
+            roundedRect(context, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height, NODE_SIZE.height / 2);
+        };
+        this.dispBattleCommand = (context) => {
+            context.fillStyle = COLOR.white;
+            gUsableBattleCommand.map((value, index) => {
+                context.fillText('→' + value, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
+            });
+        };
+        this.getBattlePos = () => {
+            return this.battlePos;
+        };
+        this.getBattleEnemyId = () => {
+            return this.battleEnemyId;
+        };
+        this.battleEndEvent = () => {
+            gScene = SCENE.moveMap;
+            this.removeEnemy();
+            console.log(this.battlePos);
+            //    gPlayerField[getIndexFromPos(this.battlePos)] = PLAYER_ID;
+        };
+        this.removeEnemy = () => {
+            gNPCs.splice(gNPCs.findIndex((value) => {
+                return value.getId() === this.battleEnemyId;
+            }), 1);
+        };
+        this.battlePos = pos;
+        this.battleEnemyId = enemyId;
+        this.battleCommand = battleCommand;
+    }
+}
 const main = () => {
     console.log("Hello, World!");
     const canvas = document.getElementById("main");
@@ -304,9 +380,10 @@ const playerMoveEvent = (event, player) => {
     console.log('player', player.pos);
 };
 const battleEvent = () => {
-    gScene = SCENE.moveMap;
-    gNPCs.splice(gNPCs.findIndex((value) => { return value.getId() === gBattleEnemyId; }), 1);
-    gPlayerField[getIndexFromPos(gBattlePos)] = PLAYER_ID;
+    if (!gBattle) {
+        return;
+    }
+    gBattle.battleEndEvent();
 };
 const updateView = (player) => {
     gFrameCounter++;
@@ -319,7 +396,10 @@ const updateView = (player) => {
             dispMoveMapScene(context, player);
             break;
         case SCENE.battle:
-            dispBattleScene(context);
+            if (!gBattle) {
+                break;
+            }
+            gBattle.dispBattleScene(context);
             break;
     }
     context.fillStyle = COLOR.black;
@@ -352,23 +432,6 @@ const dispMoveMapScene = (context, player) => {
     dispPlayer(context, player, COLOR.blue);
     gNPCs.map((value) => {
         dispPlayer(context, value, COLOR.red);
-    });
-};
-const dispBattleScene = (context) => {
-    context.fillStyle = COLOR.black;
-    context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
-    dispBattleTextField(context);
-    dispBattleCommand(context);
-};
-const dispBattleTextField = (context) => {
-    context.strokeStyle = COLOR.white;
-    roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height, NODE_SIZE.height / 2);
-    roundedRect(context, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height, NODE_SIZE.height / 2);
-};
-const dispBattleCommand = (context) => {
-    context.fillStyle = COLOR.white;
-    gUsableBattleCommand.map((value, index) => {
-        context.fillText('→' + value, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
     });
 };
 const roundedRect = (context, x, y, width, height, radius) => {
