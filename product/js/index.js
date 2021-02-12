@@ -237,6 +237,9 @@ class Player {
             };
             this.moveExecute(nextPos);
         };
+        this.moveToPos = (pos) => {
+            this.moveExecute(pos);
+        };
         this.getId = () => {
             return this.playerId;
         };
