@@ -1,5 +1,5 @@
 "use strict";
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 const FONT = {
     message: 20
 };
@@ -66,7 +66,11 @@ const BATTLE_TEXT_FIELD = {
     },
     skillField: {
         height: 8,
-        width: 18
+        width: 23
+    },
+    messageField: {
+        height: 8,
+        width: 30
     },
     textNode: {
         height: 1.5,
@@ -80,6 +84,11 @@ const BATTLE_TEXT_FIELD = {
         top: 0.5,
         left: 0.5
     }
+};
+const BATTLE_START_MESSAGE = '魔物があらわれた！！';
+const BATTLE_END_MESSAGE = {
+    removeEnemy: '魔物をやっつけた！！',
+    escape: '魔物からにげだした！！'
 };
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
@@ -259,14 +268,19 @@ class Battle {
     constructor(pos, enemyId, battleCommand, player, playerMoveTo) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = 0;
+        this.isEscape = false;
         this.inputEvent = (event) => {
+            console.log(this.battlePhese);
             switch (this.battlePhese) {
                 case 0:
                     this.readBattleStartMessage(event);
+                    break;
                 case 1:
                     this.chooseBattleCommand(event);
+                    break;
                 case 2:
                     this.readBattleEndMessage(event);
+                    break;
             }
         };
         this.readBattleStartMessage = (event) => {
@@ -282,7 +296,7 @@ class Battle {
                     break;
                 case 'ArrowDown':
                     gPressString += 'D';
-                    if (this.battleCommandCursorPos < this.battleCommand.length) {
+                    if (this.battleCommandCursorPos < (this.battleCommand.length - 1)) {
                         this.battleCommandCursorPos++;
                     }
                     break;
@@ -293,14 +307,57 @@ class Battle {
         };
         this.readBattleEndMessage = (event) => {
             this.battlePhese = 0;
+            this.battleEndEvent();
         };
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
             context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
-            this.dispBattleTextField(context);
+            switch (this.battlePhese) {
+                case 0:
+                    this.dispBattleStartMessagePhase(context);
+                    break;
+                case 1:
+                    this.dispChooseCommandPhase(context);
+                    break;
+                case 2:
+                    this.dispBattleEndMessagePhase(context);
+                    break;
+            }
+        };
+        this.dispBattleStartMessagePhase = (context) => {
+            this.dispBattleMessageField(context);
+            this.dispBattleMessage(context, BATTLE_START_MESSAGE);
+        };
+        this.dispChooseCommandPhase = (context) => {
+            this.dispBattleCommandField(context);
             this.dispBattleCommand(context);
         };
-        this.dispBattleTextField = (context) => {
+        this.dispBattleEndMessagePhase = (context) => {
+            let message;
+            switch (this.battleCommandCursorPos) {
+                case 0:
+                    message = BATTLE_END_MESSAGE.removeEnemy;
+                    break;
+                case 1:
+                    message = BATTLE_END_MESSAGE.escape;
+                    this.isEscape = true;
+                    break;
+                default:
+                    message = BATTLE_END_MESSAGE.removeEnemy;
+                    break;
+            }
+            this.dispBattleMessageField(context);
+            this.dispBattleMessage(context, message);
+        };
+        this.dispBattleMessageField = (context) => {
+            context.strokeStyle = COLOR.white;
+            roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.messageField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.messageField.height, NODE_SIZE.height / 2);
+        };
+        this.dispBattleMessage = (context, message) => {
+            context.fillStyle = COLOR.white;
+            context.fillText(message, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
+        };
+        this.dispBattleCommandField = (context) => {
             context.strokeStyle = COLOR.white;
             roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.commandField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.commandField.height, NODE_SIZE.height / 2);
             roundedRect(context, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left * 2 + BATTLE_TEXT_FIELD.commandField.width), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.skillField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.skillField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.skillField.height, NODE_SIZE.height / 2);
@@ -308,7 +365,9 @@ class Battle {
         this.dispBattleCommand = (context) => {
             context.fillStyle = COLOR.white;
             gUsableBattleCommand.map((value, index) => {
-                context.fillText('→' + value, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
+                let message = index === this.battleCommandCursorPos ? '→' : '　';
+                message += value;
+                context.fillText(message, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + index * BATTLE_TEXT_FIELD.textNode.height + 1));
             });
         };
         this.getBattlePos = () => {
@@ -319,9 +378,11 @@ class Battle {
         };
         this.battleEndEvent = () => {
             gScene = SCENE.moveMap;
-            this.removeEnemy();
-            gPlayerField[getIndexFromPos(this.battlePos)] = 0;
-            this.player.moveToPos(this.battlePos, this.playerMoveTo);
+            if (!this.isEscape) {
+                this.removeEnemy();
+                gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+                this.player.moveToPos(this.battlePos, this.playerMoveTo);
+            }
         };
         this.removeEnemy = () => {
             const index = gPlayers.findIndex((value) => {
@@ -362,7 +423,7 @@ const main = () => {
                 playerMoveEvent(event, player);
                 break;
             case SCENE.battle:
-                battleEvent();
+                battleEvent(event);
                 break;
         }
     });
@@ -408,11 +469,11 @@ const playerMoveEvent = (event, player) => {
     }
     console.log('player', player.pos);
 };
-const battleEvent = () => {
+const battleEvent = (event) => {
     if (!gBattle) {
         return;
     }
-    gBattle.battleEndEvent();
+    gBattle.inputEvent(event);
 };
 const updateView = (player) => {
     gFrameCounter++;
