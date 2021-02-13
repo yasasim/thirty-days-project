@@ -10,7 +10,7 @@ interface FieldStatus {
 
 type Angle = 'up' | 'right' | 'down' | 'left'
 
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 
 const FONT = {
   message: 20
@@ -225,9 +225,10 @@ const checkCollision = (pos: Position): boolean => {
   return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 }
 
-const startBattle = (pos: Position, player: Player) => {
+const startBattle = (player: Player, playerTo: Angle) => {
   gScene = SCENE.battle;
-  gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player);
+  const pos = getNextPos(player.pos, playerTo)
+  gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
 }
 
 class Player {
@@ -253,7 +254,6 @@ class Player {
       if ( this.playerId != PLAYER_ID ){
         return RV_CANNOT_MOVE;
       }
-      startBattle(pos, gPlayers[PLAYER_ID]);
       return RV_BATTLE_START;
     }
     gPlayerField[getIndexFromPos(this.pos)] = EMPTY;
@@ -298,7 +298,8 @@ class Player {
     return this.moveExecute(nextPos);
   }
 
-  moveToPos = (pos: Position) => {
+  moveToPos = (pos: Position, angle: Angle) => {
+    this.angle = angle;
     return this.moveExecute(pos);
   }
 
@@ -314,12 +315,14 @@ class Battle {
   private battleCommandCursorPos: number = 0;
   private battlePhese: number = 0;
   private player: Player;
+  private playerMoveTo: Angle;
 
-  constructor (pos: Position, enemyId: number, battleCommand: string[], player: Player) {
+  constructor (pos: Position, enemyId: number, battleCommand: string[], player: Player, playerMoveTo: Angle) {
     this.battlePos = pos;
     this.battleEnemyId = enemyId;
     this.battleCommand = battleCommand;
     this.player = player;
+    this.playerMoveTo = playerMoveTo;
   }
 
   inputEvent = (event: KeyboardEvent) => {
@@ -408,9 +411,9 @@ class Battle {
 
   battleEndEvent = () => {
     gScene = SCENE.moveMap;
-    // this.removeEnemy();
-    // gPlayerField[getIndexFromPos(this.battlePos)] = 0;
-    // this.player.moveToPos(this.battlePos);
+    this.removeEnemy();
+    gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+    this.player.moveToPos(this.battlePos, this.playerMoveTo);
   }
 
   private removeEnemy = () => {
@@ -473,33 +476,33 @@ const getCanvasRenderingContext2D = (canvas: HTMLCanvasElement): CanvasRendering
 
 const playerMoveEvent = (event: KeyboardEvent, player: Player) => {
   let retval;
-  let nextPos: Position;
+  let playerTo: Angle;
   switch(event.key) {
     case 'ArrowUp':
       gPressString += 'U';
-      nextPos = {x: player.pos.x, y: player.pos.y - 1};
+      playerTo = 'up';
       retval = player.moveUp();
       break;
     case 'ArrowDown':
       gPressString += 'D';
-      nextPos = {x: player.pos.x, y: player.pos.y + 1};
+      playerTo = 'down';
       retval = player.moveDown();
       break;
     case 'ArrowLeft':
       gPressString += 'L';
-      nextPos = {x: player.pos.x - 1, y: player.pos.y};
+      playerTo = 'left'
       retval = player.moveLeft();
       break;
     case 'ArrowRight':
       gPressString += 'R';
-      nextPos = {x: player.pos.x + 1, y: player.pos.y};
+      playerTo = 'right'
       retval = player.moveRight();
       break;
     default:
       return;
   }
   if(retval === RV_BATTLE_START) {
-    startBattle(nextPos, player);
+    startBattle( player, playerTo);
   }
   console.log('player', player.pos);
 }
@@ -649,6 +652,19 @@ const dispPlayer = (context: CanvasRenderingContext2D, player: Player, color: st
 
 }
 
-const getRandomInt = (min: number, max: number) => {
+const getRandomInt = (min: number, max: number): number => {
   return Math.floor(Math.random() * max + min);
+}
+
+const getNextPos = (pos: Position, angle: Angle): Position => {
+  switch(angle) {
+    case 'up':
+      return {x: pos.x, y: pos.y - 1};
+    case 'down':
+      return {x: pos.x, y: pos.y + 1};
+    case 'right':
+      return {x: pos.x + 1, y: pos.y};
+    case 'left':
+      return {x: pos.x - 1, y: pos.y};
+  }
 }

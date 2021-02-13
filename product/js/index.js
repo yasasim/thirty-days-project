@@ -1,5 +1,5 @@
 "use strict";
-const DEBUG_MODE = false;
+const DEBUG_MODE = true;
 const FONT = {
     message: 20
 };
@@ -185,9 +185,10 @@ const canWalkInto = (pos) => {
 const checkCollision = (pos) => {
     return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 };
-const startBattle = (pos, player) => {
+const startBattle = (player, playerTo) => {
     gScene = SCENE.battle;
-    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player);
+    const pos = getNextPos(player.pos, playerTo);
+    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
 };
 class Player {
     constructor(startPos, playerId) {
@@ -202,7 +203,6 @@ class Player {
                 if (this.playerId != PLAYER_ID) {
                     return RV_CANNOT_MOVE;
                 }
-                startBattle(pos, gPlayers[PLAYER_ID]);
                 return RV_BATTLE_START;
             }
             gPlayerField[getIndexFromPos(this.pos)] = EMPTY;
@@ -242,7 +242,8 @@ class Player {
             };
             return this.moveExecute(nextPos);
         };
-        this.moveToPos = (pos) => {
+        this.moveToPos = (pos, angle) => {
+            this.angle = angle;
             return this.moveExecute(pos);
         };
         this.getId = () => {
@@ -255,7 +256,7 @@ class Player {
     }
 }
 class Battle {
-    constructor(pos, enemyId, battleCommand, player) {
+    constructor(pos, enemyId, battleCommand, player, playerMoveTo) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = 0;
         this.inputEvent = (event) => {
@@ -318,9 +319,9 @@ class Battle {
         };
         this.battleEndEvent = () => {
             gScene = SCENE.moveMap;
-            // this.removeEnemy();
-            // gPlayerField[getIndexFromPos(this.battlePos)] = 0;
-            // this.player.moveToPos(this.battlePos);
+            this.removeEnemy();
+            gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+            this.player.moveToPos(this.battlePos, this.playerMoveTo);
         };
         this.removeEnemy = () => {
             const index = gPlayers.findIndex((value) => {
@@ -338,6 +339,7 @@ class Battle {
         this.battleEnemyId = enemyId;
         this.battleCommand = battleCommand;
         this.player = player;
+        this.playerMoveTo = playerMoveTo;
     }
 }
 const main = () => {
@@ -376,33 +378,33 @@ const getCanvasRenderingContext2D = (canvas) => {
 };
 const playerMoveEvent = (event, player) => {
     let retval;
-    let nextPos;
+    let playerTo;
     switch (event.key) {
         case 'ArrowUp':
             gPressString += 'U';
-            nextPos = { x: player.pos.x, y: player.pos.y - 1 };
+            playerTo = 'up';
             retval = player.moveUp();
             break;
         case 'ArrowDown':
             gPressString += 'D';
-            nextPos = { x: player.pos.x, y: player.pos.y + 1 };
+            playerTo = 'down';
             retval = player.moveDown();
             break;
         case 'ArrowLeft':
             gPressString += 'L';
-            nextPos = { x: player.pos.x - 1, y: player.pos.y };
+            playerTo = 'left';
             retval = player.moveLeft();
             break;
         case 'ArrowRight':
             gPressString += 'R';
-            nextPos = { x: player.pos.x + 1, y: player.pos.y };
+            playerTo = 'right';
             retval = player.moveRight();
             break;
         default:
             return;
     }
     if (retval === RV_BATTLE_START) {
-        startBattle(nextPos, player);
+        startBattle(player, playerTo);
     }
     console.log('player', player.pos);
 };
@@ -532,4 +534,16 @@ const dispPlayer = (context, player, color) => {
 };
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * max + min);
+};
+const getNextPos = (pos, angle) => {
+    switch (angle) {
+        case 'up':
+            return { x: pos.x, y: pos.y - 1 };
+        case 'down':
+            return { x: pos.x, y: pos.y + 1 };
+        case 'right':
+            return { x: pos.x + 1, y: pos.y };
+        case 'left':
+            return { x: pos.x - 1, y: pos.y };
+    }
 };
