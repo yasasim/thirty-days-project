@@ -81,6 +81,20 @@ const SCENE = {
   battle: 1
 }
 
+const BATTLE_PHASE = {
+  start: 0,
+  chooseCommand: 1,
+  commandExecute: 2,
+  end: 3
+}
+
+const BATTLE_END_TYPE = {
+  false: 0,
+  win: 1,
+  escape: 2,
+  lose: 3
+}
+
 const PLAYER_ID = 1;
 
 const EMPTY = 0;
@@ -114,9 +128,14 @@ const BATTLE_TEXT_FIELD = {
 
 const BATTLE_START_MESSAGE = '魔物があらわれた！！';
 
+const BATTLE_COMMAND_EXECUTE_MESSAGE = {
+  attack: 'プレイヤーの攻撃！！',
+  escape: 'プレイヤーは逃げ出した！！',
+  nothing: 'しかし何も起こらなかった！！'
+}
+
 const BATTLE_END_MESSAGE = {
-  removeEnemy: '魔物をやっつけた！！',
-  escape: '魔物からにげだした！！'
+  removeEnemy: '魔物をやっつけた！！'
 }
 
 const RV_BATTLE_START = 2;
@@ -131,7 +150,8 @@ let gScene = SCENE.moveMap;
 
 const gUsableBattleCommand = [
   'たたかう',
-  'にげる'
+  'にげる',
+  'ああああ'
 ]
 
 const gPlayers: Player[] = [] ;
@@ -324,10 +344,11 @@ class Battle {
   private battleEnemyId: number;
   private battleCommand: string[];
   private battleCommandCursorPos: number = 0;
-  private battlePhese: number = 0;
+  private battlePhese: number = BATTLE_PHASE.start;
   private player: Player;
   private playerMoveTo: Angle;
-  private isEscape: boolean = false;
+  private message: string = BATTLE_START_MESSAGE;
+  private battleEndType: number = BATTLE_END_TYPE.false;
 
   constructor (pos: Position, enemyId: number, battleCommand: string[], player: Player, playerMoveTo: Angle) {
     this.battlePos = pos;
@@ -340,44 +361,76 @@ class Battle {
   inputEvent = (event: KeyboardEvent) => {
     console.log(this.battlePhese);
     switch(this.battlePhese){
-      case 0:
+      case BATTLE_PHASE.start:
         this.readBattleStartMessage(event);
         break;
-      case 1:
+      case BATTLE_PHASE.chooseCommand:
         this.chooseBattleCommand(event);
         break;
-      case 2:
+      case BATTLE_PHASE.commandExecute:
+        this.readBattleCommandExecuteMessage();
+        break;
+      case BATTLE_PHASE.end:
         this.readBattleEndMessage(event);
         break;
     }
   }
 
   private readBattleStartMessage = (event: KeyboardEvent) => {
-    this.battlePhese = 1;
+    this.battlePhese = BATTLE_PHASE.chooseCommand;
   }
 
   private chooseBattleCommand = (event: KeyboardEvent) => {
     switch(event.key) {
       case 'ArrowUp':
-        gPressString += 'U';
         if(this.battleCommandCursorPos > 0) {
           this.battleCommandCursorPos--;
         }
         break;
       case 'ArrowDown':
-        gPressString += 'D';
         if(this.battleCommandCursorPos < (this.battleCommand.length - 1)){
           this.battleCommandCursorPos++;
         }
         break;
       case 'Enter':
-        this.battlePhese = 2;
+        this.commandDecision();
+        this.battlePhese = BATTLE_PHASE.commandExecute;
+        break;
+    }
+  }
+
+  private commandDecision = () => {
+    switch(this.battleCommandCursorPos){
+      case 0:
+        this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
+        this.battleEndType = BATTLE_END_TYPE.win;
+        break;
+      case 1:
+        this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.escape;
+        this.battleEndType = BATTLE_END_TYPE.escape;
+        break;
+      case 2:
+        this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
+        break;
+    }
+  }
+
+  private readBattleCommandExecuteMessage = () => {
+    switch(this.battleEndType){
+      case BATTLE_END_TYPE.win:
+        this.message = BATTLE_END_MESSAGE.removeEnemy;
+        this.battlePhese = BATTLE_PHASE.end;
+        break;
+      case BATTLE_END_TYPE.escape:
+        this.battleEndEvent();
+        break;
+      case BATTLE_END_TYPE.false:
+        this.battlePhese = BATTLE_PHASE.chooseCommand;
         break;
     }
   }
 
   private readBattleEndMessage = (event: KeyboardEvent) => {
-    this.battlePhese = 0;
     this.battleEndEvent();
   }
 
@@ -385,13 +438,16 @@ class Battle {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
     switch(this.battlePhese){
-      case 0:
+      case BATTLE_PHASE.start:
         this.dispBattleStartMessagePhase(context);
         break;
-      case 1:
+      case BATTLE_PHASE.chooseCommand:
         this.dispChooseCommandPhase(context);
         break;
-      case 2:
+      case BATTLE_PHASE.commandExecute:
+        this.dispCommandExecutePhase(context);
+        break;
+      case BATTLE_PHASE.end:
         this.dispBattleEndMessagePhase(context);
         break;
     }
@@ -399,7 +455,7 @@ class Battle {
 
   private dispBattleStartMessagePhase = (context: CanvasRenderingContext2D) => {
     this.dispBattleMessageField(context);
-    this.dispBattleMessage(context, BATTLE_START_MESSAGE);
+    this.dispBattleMessage(context);
   }
 
   private dispChooseCommandPhase = (context: CanvasRenderingContext2D) => {
@@ -407,22 +463,14 @@ class Battle {
     this.dispBattleCommand(context);
   }
 
-  private dispBattleEndMessagePhase = (context: CanvasRenderingContext2D) => {
-    let message: string;
-    switch(this.battleCommandCursorPos){
-      case 0:
-        message = BATTLE_END_MESSAGE.removeEnemy;
-        break;
-      case 1:
-        message = BATTLE_END_MESSAGE.escape;
-        this.isEscape = true;
-        break;
-      default:
-        message = BATTLE_END_MESSAGE.removeEnemy;
-        break;
-    }
+  private dispCommandExecutePhase = (context: CanvasRenderingContext2D) => {
     this.dispBattleMessageField(context);
-    this.dispBattleMessage(context, message);
+    this.dispBattleMessage(context);
+  }
+
+  private dispBattleEndMessagePhase = (context: CanvasRenderingContext2D) => {
+    this.dispBattleMessageField(context);
+    this.dispBattleMessage(context);
   }
 
   private dispBattleMessageField = (context: CanvasRenderingContext2D) => {
@@ -437,10 +485,10 @@ class Battle {
     );
   }
 
-  private dispBattleMessage = (context: CanvasRenderingContext2D, message: string) => {
+  private dispBattleMessage = (context: CanvasRenderingContext2D) => {
     context.fillStyle = COLOR.white;
     context.fillText(
-      message,
+      this.message,
       NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left),
       NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1)
     );
@@ -488,9 +536,9 @@ class Battle {
 
   battleEndEvent = () => {
     gScene = SCENE.moveMap;
-    if(!this.isEscape){
+    if(this.battleEndType === BATTLE_END_TYPE.win){
       this.removeEnemy();
-      gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+      gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
       this.player.moveToPos(this.battlePos, this.playerMoveTo);
     }
   }
