@@ -721,6 +721,7 @@ const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => 
   gEnemys.map((value) => {
     dispCharactor(context, value, COLOR.red);
   });
+  dispPlayerStatus(context);
 }
 
 const dispField = (context: CanvasRenderingContext2D): void => {
@@ -773,6 +774,13 @@ const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, col
 
   context.fill();
 
+}
+
+const dispPlayerStatus = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = COLOR.black;
+  context.fillText('プレイヤー', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+  context.fillText('Lv.100', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+  context.fillText('HP 9999', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
 }
 
 const getRandomInt = (min: number, max: number): number => {

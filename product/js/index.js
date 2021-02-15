@@ -586,6 +586,7 @@ const dispMoveMapScene = (context, player) => {
     gEnemys.map((value) => {
         dispCharactor(context, value, COLOR.red);
     });
+    dispPlayerStatus(context);
 };
 const dispField = (context) => {
     gMap.map((value, index) => {
@@ -630,6 +631,12 @@ const dispCharactor = (context, player, color) => {
             break;
     }
     context.fill();
+};
+const dispPlayerStatus = (context) => {
+    context.fillStyle = COLOR.black;
+    context.fillText('プレイヤー', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+    context.fillText('Lv.100', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+    context.fillText('HP 9999', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
 };
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * max + min);
