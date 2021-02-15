@@ -288,6 +288,38 @@ class Charactor {
 class Player extends Charactor {
     constructor(startPos, playerId) {
         super(startPos, playerId);
+        this.playerMoveEvent = (event) => {
+            let retval;
+            let playerTo;
+            switch (event.key) {
+                case 'ArrowUp':
+                    gPressString += 'U';
+                    playerTo = 'up';
+                    retval = this.moveUp();
+                    break;
+                case 'ArrowDown':
+                    gPressString += 'D';
+                    playerTo = 'down';
+                    retval = this.moveDown();
+                    break;
+                case 'ArrowLeft':
+                    gPressString += 'L';
+                    playerTo = 'left';
+                    retval = this.moveLeft();
+                    break;
+                case 'ArrowRight':
+                    gPressString += 'R';
+                    playerTo = 'right';
+                    retval = this.moveRight();
+                    break;
+                default:
+                    return;
+            }
+            if (retval === RV_BATTLE_START) {
+                startBattle(this, playerTo);
+            }
+            console.log('player', this.pos);
+        };
     }
 }
 class Enemy extends Charactor {
@@ -477,7 +509,6 @@ class Battle {
     }
 }
 const main = () => {
-    console.log("Hello, World!");
     const canvas = document.getElementById("main");
     if (!canvas.getContext) {
         alert("canvas is not found");
@@ -493,7 +524,7 @@ const main = () => {
     window.addEventListener('keydown', (event) => {
         switch (gScene) {
             case SCENE.moveMap:
-                playerMoveEvent(event, player);
+                player.playerMoveEvent(event);
                 break;
             case SCENE.battle:
                 battleEvent(event);
@@ -509,38 +540,6 @@ const getCanvasRenderingContext2D = (canvas) => {
         throw new Error("cannot get context");
     }
     return context;
-};
-const playerMoveEvent = (event, player) => {
-    let retval;
-    let playerTo;
-    switch (event.key) {
-        case 'ArrowUp':
-            gPressString += 'U';
-            playerTo = 'up';
-            retval = player.moveUp();
-            break;
-        case 'ArrowDown':
-            gPressString += 'D';
-            playerTo = 'down';
-            retval = player.moveDown();
-            break;
-        case 'ArrowLeft':
-            gPressString += 'L';
-            playerTo = 'left';
-            retval = player.moveLeft();
-            break;
-        case 'ArrowRight':
-            gPressString += 'R';
-            playerTo = 'right';
-            retval = player.moveRight();
-            break;
-        default:
-            return;
-    }
-    if (retval === RV_BATTLE_START) {
-        startBattle(player, playerTo);
-    }
-    console.log('player', player.pos);
 };
 const battleEvent = (event) => {
     if (!gBattle) {

@@ -261,7 +261,7 @@ const checkCollision = (pos: Position): boolean => {
   return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 }
 
-const startBattle = (player: Charactor, playerTo: Angle) => {
+const startBattle = (player: Player, playerTo: Angle) => {
   gScene = SCENE.battle;
   const pos = getNextPos(player.pos, playerTo)
   gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
@@ -347,6 +347,39 @@ class Charactor {
 class Player extends Charactor {
   constructor (startPos: Position, playerId: number) {
     super(startPos, playerId);
+  }
+
+  playerMoveEvent = (event: KeyboardEvent) => {
+    let retval;
+    let playerTo: Angle;
+    switch(event.key) {
+      case 'ArrowUp':
+        gPressString += 'U';
+        playerTo = 'up';
+        retval = this.moveUp();
+        break;
+      case 'ArrowDown':
+        gPressString += 'D';
+        playerTo = 'down';
+        retval = this.moveDown();
+        break;
+      case 'ArrowLeft':
+        gPressString += 'L';
+        playerTo = 'left'
+        retval = this.moveLeft();
+        break;
+      case 'ArrowRight':
+        gPressString += 'R';
+        playerTo = 'right'
+        retval = this.moveRight();
+        break;
+      default:
+        return;
+    }
+    if(retval === RV_BATTLE_START) {
+      startBattle(this, playerTo);
+    }
+    console.log('player', this.pos);
   }
 }
 
@@ -593,7 +626,6 @@ class Battle {
 }
 
 const main = () => {
-  console.log("Hello, World!");
   const canvas = <HTMLCanvasElement>document.getElementById("main");
 
   if(!canvas.getContext){
@@ -615,7 +647,7 @@ const main = () => {
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     switch (gScene) {
       case SCENE.moveMap:
-        playerMoveEvent(event, player);
+        player.playerMoveEvent(event);
         break;
       case SCENE.battle:
         battleEvent(event);
@@ -634,39 +666,6 @@ const getCanvasRenderingContext2D = (canvas: HTMLCanvasElement): CanvasRendering
     throw new Error("cannot get context");
   }
   return context;
-}
-
-const playerMoveEvent = (event: KeyboardEvent, player: Player) => {
-  let retval;
-  let playerTo: Angle;
-  switch(event.key) {
-    case 'ArrowUp':
-      gPressString += 'U';
-      playerTo = 'up';
-      retval = player.moveUp();
-      break;
-    case 'ArrowDown':
-      gPressString += 'D';
-      playerTo = 'down';
-      retval = player.moveDown();
-      break;
-    case 'ArrowLeft':
-      gPressString += 'L';
-      playerTo = 'left'
-      retval = player.moveLeft();
-      break;
-    case 'ArrowRight':
-      gPressString += 'R';
-      playerTo = 'right'
-      retval = player.moveRight();
-      break;
-    default:
-      return;
-  }
-  if(retval === RV_BATTLE_START) {
-    startBattle(player, playerTo);
-  }
-  console.log('player', player.pos);
 }
 
 const battleEvent = (event: KeyboardEvent) => {
