@@ -53,6 +53,10 @@ const FIELD_SIZE = {
     x: 32,
     y: 32
 };
+const CONSOLE_SPACE_SIZE = {
+    width: 8,
+    height: 8
+};
 const SCENE = {
     moveMap: 0,
     battle: 1
@@ -117,7 +121,7 @@ const gUsableBattleCommand = [
     'にげる',
     'ああああ'
 ];
-const gPlayers = [];
+const gEnemys = [];
 let gBattle = null;
 const gMap = [
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -216,7 +220,7 @@ const startBattle = (player, playerTo) => {
     const pos = getNextPos(player.pos, playerTo);
     gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
 };
-class Player {
+class Charactor {
     constructor(startPos, playerId) {
         this.moveExecute = (pos) => {
             if (isMapOver(pos)) {
@@ -279,6 +283,33 @@ class Player {
         this.angle = 'down';
         this.playerId = playerId;
         gPlayerField[getIndexFromPos(startPos)] = playerId;
+    }
+}
+class Player extends Charactor {
+    constructor(startPos, playerId) {
+        super(startPos, playerId);
+    }
+}
+class Enemy extends Charactor {
+    constructor(startPos, playerId) {
+        super(startPos, playerId);
+    }
+    randomMove() {
+        const rand = getRandomInt(0, 4);
+        switch (rand) {
+            case 0:
+                this.moveDown();
+                break;
+            case 1:
+                this.moveLeft();
+                break;
+            case 2:
+                this.moveRight();
+                break;
+            case 3:
+                this.moveUp();
+                break;
+        }
     }
 }
 class Battle {
@@ -427,7 +458,7 @@ class Battle {
             }
         };
         this.removeEnemy = () => {
-            const index = gPlayers.findIndex((value) => {
+            const index = gEnemys.findIndex((value) => {
                 console.log(`${value.getId()}, ${this.battleEnemyId}`);
                 console.log(value.getId() === this.battleEnemyId);
                 return value.getId() === this.battleEnemyId;
@@ -436,7 +467,7 @@ class Battle {
                 return;
             }
             console.log(index);
-            gPlayers.splice(index, 1);
+            gEnemys.splice(index, 1);
         };
         this.battlePos = pos;
         this.battleEnemyId = enemyId;
@@ -457,8 +488,8 @@ const main = () => {
     const context = getCanvasRenderingContext2D(canvas);
     context.font = FONT.message.toString() + "px sans-serif";
     const player = new Player({ x: 0, y: 0 }, PLAYER_ID);
-    gPlayers.push(new Player({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 }, 2));
-    gPlayers.push(new Player({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 }, 3));
+    gEnemys.push(new Enemy({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 }, 2));
+    gEnemys.push(new Enemy({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 }, 3));
     window.addEventListener('keydown', (event) => {
         switch (gScene) {
             case SCENE.moveMap:
@@ -540,48 +571,21 @@ const updateView = (player) => {
 };
 const moveNPCs = () => {
     if (gFrameCounter % 15 === 0) {
-        gPlayers.map((value) => {
-            const rand = getRandomInt(0, 4);
-            switch (rand) {
-                case 0:
-                    value.moveDown();
-                    break;
-                case 1:
-                    value.moveLeft();
-                    break;
-                case 2:
-                    value.moveRight();
-                    break;
-                case 3:
-                    value.moveUp();
-                    break;
-            }
+        gEnemys.map((value) => {
+            value.randomMove();
         });
     }
-};
-const dispMoveMapScene = (context, player) => {
-    dispField(context);
-    dispPlayer(context, player, COLOR.blue);
-    gPlayers.map((value) => {
-        dispPlayer(context, value, COLOR.red);
-    });
-};
-const roundedRect = (context, x, y, width, height, radius) => {
-    context.beginPath();
-    context.moveTo(x, y + radius);
-    context.lineTo(x, y + height - radius);
-    context.arcTo(x, y + height, x + radius, y + height, radius);
-    context.lineTo(x + width - radius, y + height);
-    context.arcTo(x + width, y + height, x + width, y + height - radius, radius);
-    context.lineTo(x + width, y + radius);
-    context.arcTo(x + width, y, x + width - radius, y, radius);
-    context.lineTo(x + radius, y);
-    context.arcTo(x, y, x, y + radius, radius);
-    context.stroke();
 };
 const dispBackground = (context) => {
     context.fillStyle = COLOR.white;
     context.fillRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
+};
+const dispMoveMapScene = (context, player) => {
+    dispField(context);
+    dispCharactor(context, player, COLOR.blue);
+    gEnemys.map((value) => {
+        dispCharactor(context, value, COLOR.red);
+    });
 };
 const dispField = (context) => {
     gMap.map((value, index) => {
@@ -594,15 +598,7 @@ const dispField = (context) => {
         }
     });
 };
-const getPosFromIndex = (index) => {
-    const pos = {
-        y: Math.floor(index / FIELD_SIZE.x),
-        x: index % FIELD_SIZE.x
-    };
-    return pos;
-};
-window.onload = main;
-const dispPlayer = (context, player, color) => {
+const dispCharactor = (context, player, color) => {
     context.fillStyle = color;
     const defaultPath = {
         x: player.pos.x * NODE_SIZE.width,
@@ -650,3 +646,24 @@ const getNextPos = (pos, angle) => {
             return { x: pos.x - 1, y: pos.y };
     }
 };
+const getPosFromIndex = (index) => {
+    const pos = {
+        y: Math.floor(index / FIELD_SIZE.x),
+        x: index % FIELD_SIZE.x
+    };
+    return pos;
+};
+const roundedRect = (context, x, y, width, height, radius) => {
+    context.beginPath();
+    context.moveTo(x, y + radius);
+    context.lineTo(x, y + height - radius);
+    context.arcTo(x, y + height, x + radius, y + height, radius);
+    context.lineTo(x + width - radius, y + height);
+    context.arcTo(x + width, y + height, x + width, y + height - radius, radius);
+    context.lineTo(x + width, y + radius);
+    context.arcTo(x + width, y, x + width - radius, y, radius);
+    context.lineTo(x + radius, y);
+    context.arcTo(x, y, x, y + radius, radius);
+    context.stroke();
+};
+window.onload = main;

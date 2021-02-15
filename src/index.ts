@@ -76,6 +76,11 @@ const FIELD_SIZE = {
   y: 32
 }
 
+const CONSOLE_SPACE_SIZE = {
+  width: 8,
+  height: 8
+}
+
 const SCENE = {
   moveMap: 0,
   battle: 1
@@ -154,7 +159,7 @@ const gUsableBattleCommand = [
   'ああああ'
 ]
 
-const gPlayers: Player[] = [] ;
+const gEnemys: Enemy[] = [] ;
 
 let gBattle: Battle | null = null;
 
@@ -256,13 +261,13 @@ const checkCollision = (pos: Position): boolean => {
   return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 }
 
-const startBattle = (player: Player, playerTo: Angle) => {
+const startBattle = (player: Charactor, playerTo: Angle) => {
   gScene = SCENE.battle;
   const pos = getNextPos(player.pos, playerTo)
   gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
 }
 
-class Player {
+class Charactor {
   pos: Position;
   angle: Angle;
   playerId: number;
@@ -336,6 +341,36 @@ class Player {
 
   getId = () => {
     return this.playerId;
+  }
+}
+
+class Player extends Charactor {
+  constructor (startPos: Position, playerId: number) {
+    super(startPos, playerId);
+  }
+}
+
+class Enemy extends Charactor {
+  constructor (startPos: Position, playerId: number) {
+    super(startPos, playerId);
+  }
+
+  randomMove(){
+    const rand = getRandomInt(0, 4);
+      switch(rand) {
+        case 0:
+          this.moveDown();
+          break;
+        case 1:
+          this.moveLeft();
+          break;
+        case 2:
+          this.moveRight();
+          break;
+        case 3:
+          this.moveUp();
+          break;
+      }
   }
 }
 
@@ -544,7 +579,7 @@ class Battle {
   }
 
   private removeEnemy = () => {
-    const index = gPlayers.findIndex((value) => {
+    const index = gEnemys.findIndex((value) => {
       console.log(`${value.getId()}, ${this.battleEnemyId}`)
       console.log(value.getId() === this.battleEnemyId)
       return value.getId() === this.battleEnemyId
@@ -553,7 +588,7 @@ class Battle {
       return;
     }
     console.log(index);
-    gPlayers.splice(index, 1);
+    gEnemys.splice(index, 1);
   }
 }
 
@@ -574,8 +609,8 @@ const main = () => {
   context.font = FONT.message.toString() + "px sans-serif";
 
   const player = new Player({x: 0, y: 0}, PLAYER_ID);
-  gPlayers.push(new Player({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, 2));
-  gPlayers.push(new Player({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, 3));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, 2));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, 3));
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     switch (gScene) {
@@ -629,7 +664,7 @@ const playerMoveEvent = (event: KeyboardEvent, player: Player) => {
       return;
   }
   if(retval === RV_BATTLE_START) {
-    startBattle( player, playerTo);
+    startBattle(player, playerTo);
   }
   console.log('player', player.pos);
 }
@@ -669,51 +704,23 @@ const updateView = (player: Player): void => {
 
 const moveNPCs = () => {
   if(gFrameCounter % 15 === 0){
-    gPlayers.map((value) => {
-      const rand = getRandomInt(0, 4);
-      switch(rand) {
-        case 0:
-          value.moveDown();
-          break;
-        case 1:
-          value.moveLeft();
-          break;
-        case 2:
-          value.moveRight();
-          break;
-        case 3:
-          value.moveUp();
-          break;
-      }
+    gEnemys.map((value) => {
+      value.randomMove();
     });
   }
-}
-
-const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => {
-  dispField(context);
-  dispPlayer(context, player, COLOR.blue);
-  gPlayers.map((value) => {
-    dispPlayer(context, value, COLOR.red);
-  });
-}
-
-const roundedRect = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
-  context.beginPath();
-  context.moveTo(x, y + radius);
-  context.lineTo(x, y + height - radius);
-  context.arcTo(x, y + height, x + radius, y + height, radius);
-  context.lineTo(x + width - radius, y + height);
-  context.arcTo(x + width, y + height, x + width, y + height - radius, radius);
-  context.lineTo(x + width, y + radius);
-  context.arcTo(x + width, y, x + width - radius, y, radius);
-  context.lineTo(x + radius, y);
-  context.arcTo(x, y, x, y + radius, radius);
-  context.stroke();
 }
 
 const dispBackground = (context: CanvasRenderingContext2D) => {
   context.fillStyle = COLOR.white;
   context.fillRect(0, 0, CANVAS_SIZE.width, CANVAS_SIZE.height);
+}
+
+const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => {
+  dispField(context);
+  dispCharactor(context, player, COLOR.blue);
+  gEnemys.map((value) => {
+    dispCharactor(context, value, COLOR.red);
+  });
 }
 
 const dispField = (context: CanvasRenderingContext2D): void => {
@@ -728,18 +735,7 @@ const dispField = (context: CanvasRenderingContext2D): void => {
   })
 }
 
-const getPosFromIndex = (index: number): Position => {
-  const pos = {
-    y: Math.floor(index / FIELD_SIZE.x),
-    x: index % FIELD_SIZE.x
-  }
-
-  return pos
-}
-
-window.onload = main;
-
-const dispPlayer = (context: CanvasRenderingContext2D, player: Player, color: string) => {
+const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, color: string) => {
 
   context.fillStyle = color;
 
@@ -795,3 +791,28 @@ const getNextPos = (pos: Position, angle: Angle): Position => {
       return {x: pos.x - 1, y: pos.y};
   }
 }
+
+const getPosFromIndex = (index: number): Position => {
+  const pos = {
+    y: Math.floor(index / FIELD_SIZE.x),
+    x: index % FIELD_SIZE.x
+  }
+
+  return pos
+}
+
+const roundedRect = (context: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, radius: number) => {
+  context.beginPath();
+  context.moveTo(x, y + radius);
+  context.lineTo(x, y + height - radius);
+  context.arcTo(x, y + height, x + radius, y + height, radius);
+  context.lineTo(x + width - radius, y + height);
+  context.arcTo(x + width, y + height, x + width, y + height - radius, radius);
+  context.lineTo(x + width, y + radius);
+  context.arcTo(x + width, y, x + width - radius, y, radius);
+  context.lineTo(x + radius, y);
+  context.arcTo(x, y, x, y + radius, radius);
+  context.stroke();
+}
+
+window.onload = main;
