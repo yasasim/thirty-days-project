@@ -57,6 +57,18 @@ const SCENE = {
     moveMap: 0,
     battle: 1
 };
+const BATTLE_PHASE = {
+    start: 0,
+    chooseCommand: 1,
+    commandExecute: 2,
+    end: 3
+};
+const BATTLE_END_TYPE = {
+    false: 0,
+    win: 1,
+    escape: 2,
+    lose: 3
+};
 const PLAYER_ID = 1;
 const EMPTY = 0;
 const BATTLE_TEXT_FIELD = {
@@ -86,9 +98,13 @@ const BATTLE_TEXT_FIELD = {
     }
 };
 const BATTLE_START_MESSAGE = '魔物があらわれた！！';
+const BATTLE_COMMAND_EXECUTE_MESSAGE = {
+    attack: 'プレイヤーの攻撃！！',
+    escape: 'プレイヤーは逃げ出した！！',
+    nothing: 'しかし何も起こらなかった！！'
+};
 const BATTLE_END_MESSAGE = {
-    removeEnemy: '魔物をやっつけた！！',
-    escape: '魔物からにげだした！！'
+    removeEnemy: '魔物をやっつけた！！'
 };
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
@@ -98,7 +114,8 @@ let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
 const gUsableBattleCommand = [
     'たたかう',
-    'にげる'
+    'にげる',
+    'ああああ'
 ];
 const gPlayers = [];
 let gBattle = null;
@@ -267,95 +284,120 @@ class Player {
 class Battle {
     constructor(pos, enemyId, battleCommand, player, playerMoveTo) {
         this.battleCommandCursorPos = 0;
-        this.battlePhese = 0;
-        this.isEscape = false;
+        this.battlePhese = BATTLE_PHASE.start;
+        this.message = BATTLE_START_MESSAGE;
+        this.battleEndType = BATTLE_END_TYPE.false;
         this.inputEvent = (event) => {
             console.log(this.battlePhese);
             switch (this.battlePhese) {
-                case 0:
+                case BATTLE_PHASE.start:
                     this.readBattleStartMessage(event);
                     break;
-                case 1:
+                case BATTLE_PHASE.chooseCommand:
                     this.chooseBattleCommand(event);
                     break;
-                case 2:
+                case BATTLE_PHASE.commandExecute:
+                    this.readBattleCommandExecuteMessage();
+                    break;
+                case BATTLE_PHASE.end:
                     this.readBattleEndMessage(event);
                     break;
             }
         };
         this.readBattleStartMessage = (event) => {
-            this.battlePhese = 1;
+            this.battlePhese = BATTLE_PHASE.chooseCommand;
         };
         this.chooseBattleCommand = (event) => {
             switch (event.key) {
                 case 'ArrowUp':
-                    gPressString += 'U';
                     if (this.battleCommandCursorPos > 0) {
                         this.battleCommandCursorPos--;
                     }
                     break;
                 case 'ArrowDown':
-                    gPressString += 'D';
                     if (this.battleCommandCursorPos < (this.battleCommand.length - 1)) {
                         this.battleCommandCursorPos++;
                     }
                     break;
                 case 'Enter':
-                    this.battlePhese = 2;
+                    this.commandDecision();
+                    this.battlePhese = BATTLE_PHASE.commandExecute;
+                    break;
+            }
+        };
+        this.commandDecision = () => {
+            switch (this.battleCommandCursorPos) {
+                case 0:
+                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
+                    this.battleEndType = BATTLE_END_TYPE.win;
+                    break;
+                case 1:
+                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.escape;
+                    this.battleEndType = BATTLE_END_TYPE.escape;
+                    break;
+                case 2:
+                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
+                    break;
+            }
+        };
+        this.readBattleCommandExecuteMessage = () => {
+            switch (this.battleEndType) {
+                case BATTLE_END_TYPE.win:
+                    this.message = BATTLE_END_MESSAGE.removeEnemy;
+                    this.battlePhese = BATTLE_PHASE.end;
+                    break;
+                case BATTLE_END_TYPE.escape:
+                    this.battleEndEvent();
+                    break;
+                case BATTLE_END_TYPE.false:
+                    this.battlePhese = BATTLE_PHASE.chooseCommand;
                     break;
             }
         };
         this.readBattleEndMessage = (event) => {
-            this.battlePhese = 0;
             this.battleEndEvent();
         };
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
             context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
             switch (this.battlePhese) {
-                case 0:
+                case BATTLE_PHASE.start:
                     this.dispBattleStartMessagePhase(context);
                     break;
-                case 1:
+                case BATTLE_PHASE.chooseCommand:
                     this.dispChooseCommandPhase(context);
                     break;
-                case 2:
+                case BATTLE_PHASE.commandExecute:
+                    this.dispCommandExecutePhase(context);
+                    break;
+                case BATTLE_PHASE.end:
                     this.dispBattleEndMessagePhase(context);
                     break;
             }
         };
         this.dispBattleStartMessagePhase = (context) => {
             this.dispBattleMessageField(context);
-            this.dispBattleMessage(context, BATTLE_START_MESSAGE);
+            this.dispBattleMessage(context);
         };
         this.dispChooseCommandPhase = (context) => {
             this.dispBattleCommandField(context);
             this.dispBattleCommand(context);
         };
-        this.dispBattleEndMessagePhase = (context) => {
-            let message;
-            switch (this.battleCommandCursorPos) {
-                case 0:
-                    message = BATTLE_END_MESSAGE.removeEnemy;
-                    break;
-                case 1:
-                    message = BATTLE_END_MESSAGE.escape;
-                    this.isEscape = true;
-                    break;
-                default:
-                    message = BATTLE_END_MESSAGE.removeEnemy;
-                    break;
-            }
+        this.dispCommandExecutePhase = (context) => {
             this.dispBattleMessageField(context);
-            this.dispBattleMessage(context, message);
+            this.dispBattleMessage(context);
+        };
+        this.dispBattleEndMessagePhase = (context) => {
+            this.dispBattleMessageField(context);
+            this.dispBattleMessage(context);
         };
         this.dispBattleMessageField = (context) => {
             context.strokeStyle = COLOR.white;
             roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.messageField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.messageField.height, NODE_SIZE.height / 2);
         };
-        this.dispBattleMessage = (context, message) => {
+        this.dispBattleMessage = (context) => {
             context.fillStyle = COLOR.white;
-            context.fillText(message, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
+            context.fillText(this.message, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
         };
         this.dispBattleCommandField = (context) => {
             context.strokeStyle = COLOR.white;
@@ -378,9 +420,9 @@ class Battle {
         };
         this.battleEndEvent = () => {
             gScene = SCENE.moveMap;
-            if (!this.isEscape) {
+            if (this.battleEndType === BATTLE_END_TYPE.win) {
                 this.removeEnemy();
-                gPlayerField[getIndexFromPos(this.battlePos)] = 0;
+                gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
                 this.player.moveToPos(this.battlePos, this.playerMoveTo);
             }
         };
