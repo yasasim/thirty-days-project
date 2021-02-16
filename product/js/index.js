@@ -113,6 +113,12 @@ const BATTLE_END_MESSAGE = {
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
+const PLAYER_STATUS = [
+    {
+        level: 100,
+        hp: 9999
+    }
+];
 let gPressString = '';
 let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
@@ -288,6 +294,14 @@ class Charactor {
 class Player extends Charactor {
     constructor(startPos, playerId) {
         super(startPos, playerId);
+        this.playerName = 'プレイヤー';
+        this.dispPlayerStatus = (context) => {
+            context.fillStyle = COLOR.black;
+            context.fillText(this.playerName, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+            context.fillText(`Lv.${this.status.level}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+            context.fillText(`HP ${this.status.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
+        };
+        this.status = PLAYER_STATUS[0];
     }
 }
 class Enemy extends Charactor {
@@ -553,6 +567,7 @@ const updateView = (player) => {
     const canvas = document.getElementById("main");
     const context = getCanvasRenderingContext2D(canvas);
     dispBackground(context);
+    player.dispPlayerStatus(context);
     switch (gScene) {
         case SCENE.moveMap:
             moveNPCs();
@@ -586,7 +601,6 @@ const dispMoveMapScene = (context, player) => {
     gEnemys.map((value) => {
         dispCharactor(context, value, COLOR.red);
     });
-    dispPlayerStatus(context);
 };
 const dispField = (context) => {
     gMap.map((value, index) => {
@@ -631,12 +645,6 @@ const dispCharactor = (context, player, color) => {
             break;
     }
     context.fill();
-};
-const dispPlayerStatus = (context) => {
-    context.fillStyle = COLOR.black;
-    context.fillText('プレイヤー', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
-    context.fillText('Lv.100', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
-    context.fillText('HP 9999', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
 };
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * max + min);

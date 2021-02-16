@@ -8,6 +8,11 @@ interface FieldStatus {
   byWalk: boolean
 }
 
+interface PlayerStatus {
+  level: number,
+  hp: number
+}
+
 type Angle = 'up' | 'right' | 'down' | 'left'
 
 const DEBUG_MODE = false;
@@ -147,6 +152,13 @@ const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
 
+const PLAYER_STATUS: PlayerStatus[] = [
+  {
+    level: 100,
+    hp: 9999
+  }
+]
+
 let gPressString: string = '';
 
 let gFrameCounter: number = 0;
@@ -261,7 +273,7 @@ const checkCollision = (pos: Position): boolean => {
   return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
 }
 
-const startBattle = (player: Charactor, playerTo: Angle) => {
+const startBattle = (player: Player, playerTo: Angle) => {
   gScene = SCENE.battle;
   const pos = getNextPos(player.pos, playerTo)
   gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
@@ -345,8 +357,19 @@ class Charactor {
 }
 
 class Player extends Charactor {
+  status: PlayerStatus;
+  playerName: string = 'プレイヤー';
+
   constructor (startPos: Position, playerId: number) {
     super(startPos, playerId);
+    this.status = PLAYER_STATUS[0];
+  }
+
+  dispPlayerStatus = (context: CanvasRenderingContext2D) => {
+    context.fillStyle = COLOR.black;
+    context.fillText(this.playerName, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+    context.fillText(`Lv.${this.status.level}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+    context.fillText(`HP ${this.status.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
   }
 }
 
@@ -683,6 +706,7 @@ const updateView = (player: Player): void => {
   const context = getCanvasRenderingContext2D(canvas);
 
   dispBackground(context);
+  player.dispPlayerStatus(context);
 
   switch(gScene) {
     case SCENE.moveMap:
@@ -721,7 +745,6 @@ const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => 
   gEnemys.map((value) => {
     dispCharactor(context, value, COLOR.red);
   });
-  dispPlayerStatus(context);
 }
 
 const dispField = (context: CanvasRenderingContext2D): void => {
@@ -774,13 +797,6 @@ const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, col
 
   context.fill();
 
-}
-
-const dispPlayerStatus = (context: CanvasRenderingContext2D) => {
-  context.fillStyle = COLOR.black;
-  context.fillText('プレイヤー', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
-  context.fillText('Lv.100', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
-  context.fillText('HP 9999', NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
 }
 
 const getRandomInt = (min: number, max: number): number => {
