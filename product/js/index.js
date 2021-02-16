@@ -1,7 +1,8 @@
 "use strict";
 const DEBUG_MODE = false;
 const FONT = {
-    message: 20
+    message: 20,
+    gameOver: 80
 };
 const COLOR = {
     red: 'rgb(255,00,00)',
@@ -59,7 +60,8 @@ const CONSOLE_SPACE_SIZE = {
 };
 const SCENE = {
     moveMap: 0,
-    battle: 1
+    battle: 1,
+    gameOver: 99
 };
 const BATTLE_PHASE = {
     start: 0,
@@ -108,15 +110,16 @@ const BATTLE_COMMAND_EXECUTE_MESSAGE = {
     nothing: 'しかし何も起こらなかった！！'
 };
 const BATTLE_END_MESSAGE = {
-    removeEnemy: '魔物をやっつけた！！'
+    removeEnemy: '魔物をやっつけた！！',
+    lose: 'プレイヤーは死んでしまった！！'
 };
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
 const PLAYER_STATUS = [
     {
-        level: 100,
-        hp: 9999
+        level: 1,
+        hp: 10
     }
 ];
 let gPressString = '';
@@ -374,6 +377,11 @@ class Battle {
             switch (this.battleCommandCursorPos) {
                 case 0:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
+                    this.player.status.hp -= 3;
+                    if (this.player.status.hp < 0) {
+                        this.battleEndType = BATTLE_END_TYPE.lose;
+                        break;
+                    }
                     this.battleEndType = BATTLE_END_TYPE.win;
                     break;
                 case 1:
@@ -382,6 +390,11 @@ class Battle {
                     break;
                 case 2:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
+                    this.player.status.hp -= 3;
+                    if (this.player.status.hp < 0) {
+                        this.battleEndType = BATTLE_END_TYPE.lose;
+                        break;
+                    }
                     break;
             }
         };
@@ -394,6 +407,10 @@ class Battle {
                 case BATTLE_END_TYPE.escape:
                     this.battleEndEvent();
                     break;
+                case BATTLE_END_TYPE.lose:
+                    this.message = BATTLE_END_MESSAGE.lose;
+                    this.battlePhese = BATTLE_PHASE.end;
+                    break;
                 case BATTLE_END_TYPE.false:
                     this.battlePhese = BATTLE_PHASE.chooseCommand;
                     break;
@@ -401,6 +418,25 @@ class Battle {
         };
         this.readBattleEndMessage = (event) => {
             this.battleEndEvent();
+        };
+        this.battleEndEvent = () => {
+            switch (this.battleEndType) {
+                case BATTLE_END_TYPE.win:
+                    gScene = SCENE.moveMap;
+                    this.removeEnemy();
+                    gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
+                    this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    break;
+                case BATTLE_END_TYPE.escape:
+                    gScene = SCENE.moveMap;
+                    break;
+                case BATTLE_END_TYPE.lose:
+                    gScene = SCENE.gameOver;
+                    break;
+                case BATTLE_END_TYPE.false:
+                    this.battlePhese = BATTLE_PHASE.chooseCommand;
+                    break;
+            }
         };
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
@@ -462,14 +498,6 @@ class Battle {
         };
         this.getBattleEnemyId = () => {
             return this.battleEnemyId;
-        };
-        this.battleEndEvent = () => {
-            gScene = SCENE.moveMap;
-            if (this.battleEndType === BATTLE_END_TYPE.win) {
-                this.removeEnemy();
-                gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
-                this.player.moveToPos(this.battlePos, this.playerMoveTo);
-            }
         };
         this.removeEnemy = () => {
             const index = gEnemys.findIndex((value) => {
@@ -579,6 +607,8 @@ const updateView = (player) => {
             }
             gBattle.dispBattleScene(context);
             break;
+        case SCENE.gameOver:
+            dispGameOverScene(context);
     }
     context.fillStyle = COLOR.black;
     context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
@@ -645,6 +675,14 @@ const dispCharactor = (context, player, color) => {
             break;
     }
     context.fill();
+};
+const dispGameOverScene = (context) => {
+    context.fillStyle = COLOR.black;
+    context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+    context.fillStyle = COLOR.red;
+    context.font = FONT.gameOver.toString() + "px sans-serif";
+    context.fillText('GAME OVER', NODE_SIZE.width * (FIELD_SIZE.x / 2 - 12), NODE_SIZE.height * (FIELD_SIZE.y / 2 + 1));
+    context.font = FONT.message.toString() + "px sans-serif";
 };
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * max + min);
