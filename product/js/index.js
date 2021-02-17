@@ -116,12 +116,30 @@ const BATTLE_END_MESSAGE = {
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
-const PLAYER_STATUS = [
-    {
-        level: 1,
-        hp: 10
-    }
+const PLAYER_STATUS_TABLE = [
+    { level: 1, maxHp: 10 },
+    { level: 2, maxHp: 12 },
+    { level: 3, maxHp: 14 },
+    { level: 4, maxHp: 16 },
+    { level: 5, maxHp: 18 },
+    { level: 6, maxHp: 20 },
+    { level: 7, maxHp: 22 },
+    { level: 8, maxHp: 24 },
+    { level: 9, maxHp: 26 },
+    { level: 10, maxHp: 28 },
 ];
+const EXP_TABLE = [
+    { level: 1, nextExp: 10 },
+    { level: 2, nextExp: 10 },
+    { level: 3, nextExp: 10 },
+    { level: 4, nextExp: 10 },
+    { level: 5, nextExp: 10 },
+    { level: 6, nextExp: 10 },
+    { level: 7, nextExp: 10 },
+    { level: 8, nextExp: 10 },
+    { level: 9, nextExp: 10 },
+];
+const MAX_LEVEL = 10;
 let gPressString = '';
 let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
@@ -301,10 +319,34 @@ class Player extends Charactor {
         this.dispPlayerStatus = (context) => {
             context.fillStyle = COLOR.black;
             context.fillText(this.playerName, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
-            context.fillText(`Lv.${this.status.level}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
-            context.fillText(`HP ${this.status.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
+            context.fillText(`Lv.${this.lv}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+            context.fillText(`HP ${this.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
         };
-        this.status = PLAYER_STATUS[0];
+        this.getExp = (exp) => {
+            if (this.lv >= MAX_LEVEL) {
+                return;
+            }
+            this.toLevelUp -= exp;
+        };
+        this.levelUp = () => {
+            this.lv++;
+            this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+                return value.level === this.lv;
+            })].maxHp;
+            this.hp = this.maxHp;
+            this.toLevelUp += EXP_TABLE[EXP_TABLE.findIndex((value) => {
+                return value.level === this.lv;
+            })].nextExp;
+            return `プレイヤーはLv.${this.lv}になった！`;
+        };
+        this.lv = 1;
+        this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+            return value.level === this.lv;
+        })].maxHp;
+        this.hp = this.maxHp;
+        this.toLevelUp = EXP_TABLE[EXP_TABLE.findIndex((value) => {
+            return value.level === this.lv;
+        })].nextExp;
     }
 }
 class Enemy extends Charactor {
@@ -335,6 +377,7 @@ class Battle {
         this.battlePhese = BATTLE_PHASE.start;
         this.message = BATTLE_START_MESSAGE;
         this.battleEndType = BATTLE_END_TYPE.false;
+        this.getExp = 15;
         this.inputEvent = (event) => {
             console.log(this.battlePhese);
             switch (this.battlePhese) {
@@ -377,8 +420,8 @@ class Battle {
             switch (this.battleCommandCursorPos) {
                 case 0:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
-                    this.player.status.hp -= 3;
-                    if (this.player.status.hp < 0) {
+                    this.player.hp -= 3;
+                    if (this.player.hp < 0) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
                     }
@@ -390,8 +433,8 @@ class Battle {
                     break;
                 case 2:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
-                    this.player.status.hp -= 3;
-                    if (this.player.status.hp < 0) {
+                    this.player.hp -= 3;
+                    if (this.player.hp < 0) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
                     }
@@ -422,6 +465,12 @@ class Battle {
         this.battleEndEvent = () => {
             switch (this.battleEndType) {
                 case BATTLE_END_TYPE.win:
+                    this.player.getExp(this.getExp);
+                    this.getExp = 0;
+                    if (this.player.toLevelUp <= 0) {
+                        this.message = this.player.levelUp();
+                        break;
+                    }
                     gScene = SCENE.moveMap;
                     this.removeEnemy();
                     gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
