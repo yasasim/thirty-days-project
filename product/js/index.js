@@ -1,7 +1,8 @@
 "use strict";
 const DEBUG_MODE = false;
 const FONT = {
-    message: 20
+    message: 20,
+    gameOver: 80
 };
 const COLOR = {
     red: 'rgb(255,00,00)',
@@ -59,7 +60,8 @@ const CONSOLE_SPACE_SIZE = {
 };
 const SCENE = {
     moveMap: 0,
-    battle: 1
+    battle: 1,
+    gameOver: 99
 };
 const BATTLE_PHASE = {
     start: 0,
@@ -108,11 +110,36 @@ const BATTLE_COMMAND_EXECUTE_MESSAGE = {
     nothing: 'しかし何も起こらなかった！！'
 };
 const BATTLE_END_MESSAGE = {
-    removeEnemy: '魔物をやっつけた！！'
+    removeEnemy: '魔物をやっつけた！！',
+    lose: 'プレイヤーは死んでしまった！！'
 };
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
+const PLAYER_STATUS_TABLE = [
+    { level: 1, maxHp: 10 },
+    { level: 2, maxHp: 12 },
+    { level: 3, maxHp: 14 },
+    { level: 4, maxHp: 16 },
+    { level: 5, maxHp: 18 },
+    { level: 6, maxHp: 20 },
+    { level: 7, maxHp: 22 },
+    { level: 8, maxHp: 24 },
+    { level: 9, maxHp: 26 },
+    { level: 10, maxHp: 28 },
+];
+const EXP_TABLE = [
+    { level: 1, nextExp: 10 },
+    { level: 2, nextExp: 10 },
+    { level: 3, nextExp: 10 },
+    { level: 4, nextExp: 10 },
+    { level: 5, nextExp: 10 },
+    { level: 6, nextExp: 10 },
+    { level: 7, nextExp: 10 },
+    { level: 8, nextExp: 10 },
+    { level: 9, nextExp: 10 },
+];
+const MAX_LEVEL = 10;
 let gPressString = '';
 let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
@@ -288,6 +315,30 @@ class Charactor {
 class Player extends Charactor {
     constructor(startPos, playerId) {
         super(startPos, playerId);
+        this.playerName = 'プレイヤー';
+        this.dispPlayerStatus = (context) => {
+            context.fillStyle = COLOR.black;
+            context.fillText(this.playerName, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+            context.fillText(`Lv.${this.lv}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+            context.fillText(`HP ${this.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
+        };
+        this.getExp = (exp) => {
+            if (this.lv >= MAX_LEVEL) {
+                return;
+            }
+            this.toLevelUp -= exp;
+        };
+        this.levelUp = () => {
+            this.lv++;
+            this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+                return value.level === this.lv;
+            })].maxHp;
+            this.hp = this.maxHp;
+            this.toLevelUp += EXP_TABLE[EXP_TABLE.findIndex((value) => {
+                return value.level === this.lv;
+            })].nextExp;
+            return `プレイヤーはLv.${this.lv}になった！`;
+        };
         this.playerMoveEvent = (event) => {
             let retval;
             let playerTo;
@@ -320,6 +371,14 @@ class Player extends Charactor {
             }
             console.log('player', this.pos);
         };
+        this.lv = 1;
+        this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+            return value.level === this.lv;
+        })].maxHp;
+        this.hp = this.maxHp;
+        this.toLevelUp = EXP_TABLE[EXP_TABLE.findIndex((value) => {
+            return value.level === this.lv;
+        })].nextExp;
     }
 }
 class Enemy extends Charactor {
@@ -350,6 +409,7 @@ class Battle {
         this.battlePhese = BATTLE_PHASE.start;
         this.message = BATTLE_START_MESSAGE;
         this.battleEndType = BATTLE_END_TYPE.false;
+        this.getExp = 15;
         this.inputEvent = (event) => {
             console.log(this.battlePhese);
             switch (this.battlePhese) {
@@ -392,6 +452,11 @@ class Battle {
             switch (this.battleCommandCursorPos) {
                 case 0:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
+                    this.player.hp -= 3;
+                    if (this.player.hp < 0) {
+                        this.battleEndType = BATTLE_END_TYPE.lose;
+                        break;
+                    }
                     this.battleEndType = BATTLE_END_TYPE.win;
                     break;
                 case 1:
@@ -400,6 +465,11 @@ class Battle {
                     break;
                 case 2:
                     this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
+                    this.player.hp -= 3;
+                    if (this.player.hp < 0) {
+                        this.battleEndType = BATTLE_END_TYPE.lose;
+                        break;
+                    }
                     break;
             }
         };
@@ -412,6 +482,10 @@ class Battle {
                 case BATTLE_END_TYPE.escape:
                     this.battleEndEvent();
                     break;
+                case BATTLE_END_TYPE.lose:
+                    this.message = BATTLE_END_MESSAGE.lose;
+                    this.battlePhese = BATTLE_PHASE.end;
+                    break;
                 case BATTLE_END_TYPE.false:
                     this.battlePhese = BATTLE_PHASE.chooseCommand;
                     break;
@@ -419,6 +493,31 @@ class Battle {
         };
         this.readBattleEndMessage = (event) => {
             this.battleEndEvent();
+        };
+        this.battleEndEvent = () => {
+            switch (this.battleEndType) {
+                case BATTLE_END_TYPE.win:
+                    this.player.getExp(this.getExp);
+                    this.getExp = 0;
+                    if (this.player.toLevelUp <= 0) {
+                        this.message = this.player.levelUp();
+                        break;
+                    }
+                    gScene = SCENE.moveMap;
+                    this.removeEnemy();
+                    gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
+                    this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    break;
+                case BATTLE_END_TYPE.escape:
+                    gScene = SCENE.moveMap;
+                    break;
+                case BATTLE_END_TYPE.lose:
+                    gScene = SCENE.gameOver;
+                    break;
+                case BATTLE_END_TYPE.false:
+                    this.battlePhese = BATTLE_PHASE.chooseCommand;
+                    break;
+            }
         };
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
@@ -480,14 +579,6 @@ class Battle {
         };
         this.getBattleEnemyId = () => {
             return this.battleEnemyId;
-        };
-        this.battleEndEvent = () => {
-            gScene = SCENE.moveMap;
-            if (this.battleEndType === BATTLE_END_TYPE.win) {
-                this.removeEnemy();
-                gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
-                this.player.moveToPos(this.battlePos, this.playerMoveTo);
-            }
         };
         this.removeEnemy = () => {
             const index = gEnemys.findIndex((value) => {
@@ -552,6 +643,7 @@ const updateView = (player) => {
     const canvas = document.getElementById("main");
     const context = getCanvasRenderingContext2D(canvas);
     dispBackground(context);
+    player.dispPlayerStatus(context);
     switch (gScene) {
         case SCENE.moveMap:
             moveNPCs();
@@ -563,6 +655,8 @@ const updateView = (player) => {
             }
             gBattle.dispBattleScene(context);
             break;
+        case SCENE.gameOver:
+            dispGameOverScene(context);
     }
     context.fillStyle = COLOR.black;
     context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
@@ -629,6 +723,14 @@ const dispCharactor = (context, player, color) => {
             break;
     }
     context.fill();
+};
+const dispGameOverScene = (context) => {
+    context.fillStyle = COLOR.black;
+    context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+    context.fillStyle = COLOR.red;
+    context.font = FONT.gameOver.toString() + "px sans-serif";
+    context.fillText('GAME OVER', NODE_SIZE.width * (FIELD_SIZE.x / 2 - 12), NODE_SIZE.height * (FIELD_SIZE.y / 2 + 1));
+    context.font = FONT.message.toString() + "px sans-serif";
 };
 const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * max + min);

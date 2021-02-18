@@ -8,12 +8,23 @@ interface FieldStatus {
   byWalk: boolean
 }
 
+interface PlayerStatus {
+  level: number,
+  maxHp: number
+}
+
+interface NextExp {
+  level: number,
+  nextExp: number
+}
+
 type Angle = 'up' | 'right' | 'down' | 'left'
 
 const DEBUG_MODE = false;
 
 const FONT = {
-  message: 20
+  message: 20,
+  gameOver: 80
 }
 
 const COLOR = {
@@ -83,7 +94,8 @@ const CONSOLE_SPACE_SIZE = {
 
 const SCENE = {
   moveMap: 0,
-  battle: 1
+  battle: 1,
+  gameOver: 99
 }
 
 const BATTLE_PHASE = {
@@ -140,12 +152,40 @@ const BATTLE_COMMAND_EXECUTE_MESSAGE = {
 }
 
 const BATTLE_END_MESSAGE = {
-  removeEnemy: '魔物をやっつけた！！'
+  removeEnemy: '魔物をやっつけた！！',
+  lose: 'プレイヤーは死んでしまった！！'
 }
 
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
+
+const PLAYER_STATUS_TABLE: PlayerStatus[] = [
+  {level:  1, maxHp:  10},
+  {level:  2, maxHp:  12},
+  {level:  3, maxHp:  14},
+  {level:  4, maxHp:  16},
+  {level:  5, maxHp:  18},
+  {level:  6, maxHp:  20},
+  {level:  7, maxHp:  22},
+  {level:  8, maxHp:  24},
+  {level:  9, maxHp:  26},
+  {level: 10, maxHp:  28},
+]
+
+const EXP_TABLE: NextExp[] = [
+  {level:  1, nextExp:  10},
+  {level:  2, nextExp:  10},
+  {level:  3, nextExp:  10},
+  {level:  4, nextExp:  10},
+  {level:  5, nextExp:  10},
+  {level:  6, nextExp:  10},
+  {level:  7, nextExp:  10},
+  {level:  8, nextExp:  10},
+  {level:  9, nextExp:  10},
+]
+
+const MAX_LEVEL = 10;
 
 let gPressString: string = '';
 
@@ -345,8 +385,56 @@ class Charactor {
 }
 
 class Player extends Charactor {
+  lv: number;
+  maxHp: number;
+  hp: number;
+  toLevelUp: number;
+  playerName: string = 'プレイヤー';
+
   constructor (startPos: Position, playerId: number) {
     super(startPos, playerId);
+    this.lv = 1;
+    this.maxHp = PLAYER_STATUS_TABLE[
+      PLAYER_STATUS_TABLE.findIndex((value) =>{
+        return value.level === this.lv
+      })
+    ].maxHp;
+    this.hp = this.maxHp;
+    this.toLevelUp = EXP_TABLE[
+      EXP_TABLE.findIndex((value) =>{
+        return value.level === this.lv
+      })
+    ].nextExp;
+  }
+
+  dispPlayerStatus = (context: CanvasRenderingContext2D) => {
+    context.fillStyle = COLOR.black;
+    context.fillText(this.playerName, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 1);
+    context.fillText(`Lv.${this.lv}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 2);
+    context.fillText(`HP ${this.hp}`, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * 3);
+  }
+
+  getExp = (exp: number) => {
+    if(this.lv >= MAX_LEVEL){
+      return;
+    }
+    this.toLevelUp -= exp;
+  }
+
+  levelUp = () => {
+    this.lv++;
+    this.maxHp = PLAYER_STATUS_TABLE[
+      PLAYER_STATUS_TABLE.findIndex((value) =>{
+        return value.level === this.lv
+      })
+    ].maxHp;
+    this.hp = this.maxHp;
+    this.toLevelUp += EXP_TABLE[
+      EXP_TABLE.findIndex((value) =>{
+        return value.level === this.lv
+      })
+    ].nextExp;
+    return `プレイヤーはLv.${this.lv}になった！`;
   }
 
   playerMoveEvent = (event: KeyboardEvent) => {
@@ -417,6 +505,7 @@ class Battle {
   private playerMoveTo: Angle;
   private message: string = BATTLE_START_MESSAGE;
   private battleEndType: number = BATTLE_END_TYPE.false;
+  private getExp: number = 15;
 
   constructor (pos: Position, enemyId: number, battleCommand: string[], player: Player, playerMoveTo: Angle) {
     this.battlePos = pos;
@@ -471,6 +560,11 @@ class Battle {
     switch(this.battleCommandCursorPos){
       case 0:
         this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
+        this.player.hp -= 3;
+        if(this.player.hp < 0){
+          this.battleEndType = BATTLE_END_TYPE.lose;
+          break;
+        }
         this.battleEndType = BATTLE_END_TYPE.win;
         break;
       case 1:
@@ -479,6 +573,11 @@ class Battle {
         break;
       case 2:
         this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
+        this.player.hp -= 3;
+        if(this.player.hp < 0){
+          this.battleEndType = BATTLE_END_TYPE.lose;
+          break;
+        }
         break;
     }
   }
@@ -492,6 +591,10 @@ class Battle {
       case BATTLE_END_TYPE.escape:
         this.battleEndEvent();
         break;
+      case BATTLE_END_TYPE.lose:
+        this.message = BATTLE_END_MESSAGE.lose;
+        this.battlePhese = BATTLE_PHASE.end;
+        break;
       case BATTLE_END_TYPE.false:
         this.battlePhese = BATTLE_PHASE.chooseCommand;
         break;
@@ -500,6 +603,32 @@ class Battle {
 
   private readBattleEndMessage = (event: KeyboardEvent) => {
     this.battleEndEvent();
+  }
+
+  battleEndEvent = () => {
+    switch(this.battleEndType){
+      case BATTLE_END_TYPE.win:
+        this.player.getExp(this.getExp);
+        this.getExp = 0;
+        if(this.player.toLevelUp <= 0){
+          this.message = this.player.levelUp();
+          break;
+        }
+        gScene = SCENE.moveMap;
+        this.removeEnemy();
+        gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
+        this.player.moveToPos(this.battlePos, this.playerMoveTo);
+        break;
+      case BATTLE_END_TYPE.escape:
+        gScene = SCENE.moveMap;
+        break;
+      case BATTLE_END_TYPE.lose:
+        gScene = SCENE.gameOver;
+        break;
+      case BATTLE_END_TYPE.false:
+        this.battlePhese = BATTLE_PHASE.chooseCommand;
+        break;
+    }
   }
 
   dispBattleScene = (context: CanvasRenderingContext2D) => {
@@ -602,15 +731,6 @@ class Battle {
     return this.battleEnemyId;
   }
 
-  battleEndEvent = () => {
-    gScene = SCENE.moveMap;
-    if(this.battleEndType === BATTLE_END_TYPE.win){
-      this.removeEnemy();
-      gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
-      this.player.moveToPos(this.battlePos, this.playerMoveTo);
-    }
-  }
-
   private removeEnemy = () => {
     const index = gEnemys.findIndex((value) => {
       console.log(`${value.getId()}, ${this.battleEnemyId}`)
@@ -682,6 +802,7 @@ const updateView = (player: Player): void => {
   const context = getCanvasRenderingContext2D(canvas);
 
   dispBackground(context);
+  player.dispPlayerStatus(context);
 
   switch(gScene) {
     case SCENE.moveMap:
@@ -694,6 +815,8 @@ const updateView = (player: Player): void => {
       }
       gBattle.dispBattleScene(context);
       break;
+    case SCENE.gameOver:
+      dispGameOverScene(context);
   }
 
   context.fillStyle = COLOR.black;
@@ -772,6 +895,15 @@ const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, col
 
   context.fill();
 
+}
+
+const dispGameOverScene = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = COLOR.black;
+  context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+  context.fillStyle = COLOR.red;
+  context.font = FONT.gameOver.toString() + "px sans-serif";
+  context.fillText('GAME OVER', NODE_SIZE.width * (FIELD_SIZE.x / 2 - 12), NODE_SIZE.height * (FIELD_SIZE.y / 2 + 1));
+  context.font = FONT.message.toString() + "px sans-serif";
 }
 
 const getRandomInt = (min: number, max: number): number => {
