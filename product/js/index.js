@@ -103,30 +103,30 @@ const BATTLE_TEXT_FIELD = {
         left: 0.5
     }
 };
-const BATTLE_START_MESSAGE = '魔物があらわれた！！';
+const BATTLE_START_MESSAGE = ['魔物があらわれた！！'];
 const BATTLE_COMMAND_EXECUTE_MESSAGE = {
-    attack: 'プレイヤーの攻撃！！',
-    escape: 'プレイヤーは逃げ出した！！',
-    nothing: 'しかし何も起こらなかった！！'
+    attack: ['プレイヤーの攻撃！！'],
+    escape: ['プレイヤーは逃げ出した！！'],
+    nothing: ['しかし何も起こらなかった！！']
 };
 const BATTLE_END_MESSAGE = {
-    removeEnemy: '魔物をやっつけた！！',
-    lose: 'プレイヤーは死んでしまった！！'
+    removeEnemy: ['魔物をやっつけた！！'],
+    lose: ['プレイヤーは死んでしまった！！']
 };
 const RV_BATTLE_START = 2;
 const RV_CANNOT_MOVE = -1;
 const RV_MOVE_EXECUTE = 1;
 const PLAYER_STATUS_TABLE = [
-    { level: 1, maxHp: 10 },
-    { level: 2, maxHp: 12 },
-    { level: 3, maxHp: 14 },
-    { level: 4, maxHp: 16 },
-    { level: 5, maxHp: 18 },
-    { level: 6, maxHp: 20 },
-    { level: 7, maxHp: 22 },
-    { level: 8, maxHp: 24 },
-    { level: 9, maxHp: 26 },
-    { level: 10, maxHp: 28 },
+    { level: 1, maxHp: 10, atack: 3 },
+    { level: 2, maxHp: 12, atack: 5 },
+    { level: 3, maxHp: 14, atack: 7 },
+    { level: 4, maxHp: 16, atack: 9 },
+    { level: 5, maxHp: 18, atack: 11 },
+    { level: 6, maxHp: 20, atack: 13 },
+    { level: 7, maxHp: 22, atack: 15 },
+    { level: 8, maxHp: 24, atack: 17 },
+    { level: 9, maxHp: 26, atack: 19 },
+    { level: 10, maxHp: 28, atack: 21 },
 ];
 const EXP_TABLE = [
     { level: 1, nextExp: 10 },
@@ -246,8 +246,16 @@ const checkCollision = (pos) => {
 };
 const startBattle = (player, playerTo) => {
     gScene = SCENE.battle;
-    const pos = getNextPos(player.pos, playerTo);
-    gBattle = new Battle(pos, gPlayerField[getIndexFromPos(pos)], gUsableBattleCommand, player, playerTo);
+    const pos = getNextPos(player.getPos(), playerTo);
+    const enemyId = gPlayerField[getIndexFromPos(pos)];
+    const index = gEnemys.findIndex((value) => {
+        return value.getId() === enemyId;
+    });
+    if (index === -1) {
+        return;
+    }
+    const enemy = gEnemys[index];
+    gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy);
 };
 class Charactor {
     constructor(startPos, playerId) {
@@ -308,6 +316,12 @@ class Charactor {
         this.getId = () => {
             return this.playerId;
         };
+        this.getPos = () => {
+            return this.pos;
+        };
+        this.getAngle = () => {
+            return this.angle;
+        };
         this.pos = startPos;
         this.angle = 'down';
         this.playerId = playerId;
@@ -332,9 +346,11 @@ class Player extends Charactor {
         };
         this.levelUp = () => {
             this.lv++;
-            this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+            const nextStatus = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
                 return value.level === this.lv;
-            })].maxHp;
+            })];
+            this.maxHp = nextStatus.maxHp;
+            this.atack = nextStatus.atack;
             this.hp = this.maxHp;
             this.toLevelUp += EXP_TABLE[EXP_TABLE.findIndex((value) => {
                 return value.level === this.lv;
@@ -371,12 +387,26 @@ class Player extends Charactor {
             if (retval === RV_BATTLE_START) {
                 startBattle(this, playerTo);
             }
-            console.log('player', this.pos);
+        };
+        this.recieveDamage = (damage) => {
+            this.hp -= damage;
+            return this.hp > 0;
+        };
+        this.getAtack = () => {
+            return this.atack;
+        };
+        this.getToLevelUp = () => {
+            return this.toLevelUp;
+        };
+        this.getHp = () => {
+            return this.hp;
         };
         this.lv = 1;
-        this.maxHp = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
+        const startStatus = PLAYER_STATUS_TABLE[PLAYER_STATUS_TABLE.findIndex((value) => {
             return value.level === this.lv;
-        })].maxHp;
+        })];
+        this.maxHp = startStatus.maxHp;
+        this.atack = startStatus.atack;
         this.hp = this.maxHp;
         this.toLevelUp = EXP_TABLE[EXP_TABLE.findIndex((value) => {
             return value.level === this.lv;
@@ -386,6 +416,16 @@ class Player extends Charactor {
 class Enemy extends Charactor {
     constructor(startPos, playerId) {
         super(startPos, playerId);
+        this.recieveDamage = (damage) => {
+            this.hp -= damage;
+            return this.hp > 0;
+        };
+        this.getAtack = () => {
+            return this.atack;
+        };
+        this.maxHp = 10;
+        this.hp = this.maxHp;
+        this.atack = 3;
     }
     randomMove() {
         const rand = getRandomInt(0, 4);
@@ -406,14 +446,13 @@ class Enemy extends Charactor {
     }
 }
 class Battle {
-    constructor(pos, enemyId, battleCommand, player, playerMoveTo) {
+    constructor(pos, battleCommand, player, playerMoveTo, enemy) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = BATTLE_PHASE.start;
-        this.message = BATTLE_START_MESSAGE;
+        this.messageBuffer = [];
         this.battleEndType = BATTLE_END_TYPE.false;
         this.getExp = 15;
         this.inputEvent = (event) => {
-            console.log(this.battlePhese);
             switch (this.battlePhese) {
                 case BATTLE_PHASE.start:
                     this.readBattleStartMessage(event);
@@ -428,8 +467,14 @@ class Battle {
                     this.readBattleEndMessage(event);
                     break;
             }
+            console.log(this.message);
+            console.log(this.messageBuffer);
         };
         this.readBattleStartMessage = (event) => {
+            const messageEnd = this.readMessage();
+            if (!messageEnd) {
+                return;
+            }
             this.battlePhese = BATTLE_PHASE.chooseCommand;
         };
         this.chooseBattleCommand = (event) => {
@@ -451,24 +496,32 @@ class Battle {
             }
         };
         this.commandDecision = () => {
+            let flgTmp;
             switch (this.battleCommandCursorPos) {
                 case 0:
-                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.attack;
-                    this.player.hp -= 3;
-                    if (this.player.hp < 0) {
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack);
+                    flgTmp = this.enemy.recieveDamage(this.player.getAtack());
+                    this.setMessage([`魔物に${this.player.getAtack()}のダメージ！！`]);
+                    if (!flgTmp) {
+                        this.battleEndType = BATTLE_END_TYPE.win;
+                        break;
+                    }
+                    this.setMessage([`魔物の攻撃！！`]);
+                    flgTmp = this.player.recieveDamage(this.enemy.getAtack());
+                    this.setMessage([`プレイヤーに${this.enemy.getAtack()}のダメージ！！`]);
+                    if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
                     }
-                    this.battleEndType = BATTLE_END_TYPE.win;
                     break;
                 case 1:
-                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.escape;
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape);
                     this.battleEndType = BATTLE_END_TYPE.escape;
                     break;
                 case 2:
-                    this.message = BATTLE_COMMAND_EXECUTE_MESSAGE.nothing;
-                    this.player.hp -= 3;
-                    if (this.player.hp < 0) {
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.nothing);
+                    flgTmp = this.player.recieveDamage(this.enemy.getAtack());
+                    if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
                     }
@@ -476,16 +529,20 @@ class Battle {
             }
         };
         this.readBattleCommandExecuteMessage = () => {
+            const messageEnd = this.readMessage();
+            if (!messageEnd) {
+                return;
+            }
             switch (this.battleEndType) {
                 case BATTLE_END_TYPE.win:
-                    this.message = BATTLE_END_MESSAGE.removeEnemy;
+                    this.setMessage(BATTLE_END_MESSAGE.removeEnemy);
                     this.battlePhese = BATTLE_PHASE.end;
                     break;
                 case BATTLE_END_TYPE.escape:
                     this.battleEndEvent();
                     break;
                 case BATTLE_END_TYPE.lose:
-                    this.message = BATTLE_END_MESSAGE.lose;
+                    this.setMessage(BATTLE_END_MESSAGE.lose);
                     this.battlePhese = BATTLE_PHASE.end;
                     break;
                 case BATTLE_END_TYPE.false:
@@ -494,6 +551,10 @@ class Battle {
             }
         };
         this.readBattleEndMessage = (event) => {
+            const messageEnd = this.readMessage();
+            if (!messageEnd) {
+                return;
+            }
             this.battleEndEvent();
         };
         this.battleEndEvent = () => {
@@ -501,7 +562,7 @@ class Battle {
                 case BATTLE_END_TYPE.win:
                     this.player.getExp(this.getExp);
                     this.getExp = 0;
-                    if (this.player.toLevelUp <= 0) {
+                    if (this.player.getToLevelUp() <= 0) {
                         this.message = this.player.levelUp();
                         break;
                     }
@@ -520,6 +581,18 @@ class Battle {
                     this.battlePhese = BATTLE_PHASE.chooseCommand;
                     break;
             }
+        };
+        this.setMessage = (message) => {
+            if (this.message === undefined) {
+                this.message = message[0];
+                this.messageBuffer = message.slice(1);
+                return;
+            }
+            this.messageBuffer = this.messageBuffer.concat(message);
+        };
+        this.readMessage = () => {
+            this.message = this.messageBuffer.shift();
+            return this.message === undefined;
         };
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
@@ -561,7 +634,7 @@ class Battle {
         };
         this.dispBattleMessage = (context) => {
             context.fillStyle = COLOR.white;
-            context.fillText(this.message, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
+            context.fillText(this.message ? this.message : '', NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
         };
         this.dispBattleCommandField = (context) => {
             context.strokeStyle = COLOR.white;
@@ -580,25 +653,23 @@ class Battle {
             return this.battlePos;
         };
         this.getBattleEnemyId = () => {
-            return this.battleEnemyId;
+            return this.enemy.getId();
         };
         this.removeEnemy = () => {
             const index = gEnemys.findIndex((value) => {
-                console.log(`${value.getId()}, ${this.battleEnemyId}`);
-                console.log(value.getId() === this.battleEnemyId);
-                return value.getId() === this.battleEnemyId;
+                return value.getId() === this.enemy.getId();
             });
             if (index === -1) {
                 return;
             }
-            console.log(index);
             gEnemys.splice(index, 1);
         };
         this.battlePos = pos;
-        this.battleEnemyId = enemyId;
         this.battleCommand = battleCommand;
         this.player = player;
         this.playerMoveTo = playerMoveTo;
+        this.enemy = enemy;
+        this.setMessage(BATTLE_START_MESSAGE);
     }
 }
 const main = () => {
@@ -726,11 +797,11 @@ const dispField = (context) => {
 const dispCharactor = (context, player, color) => {
     context.fillStyle = color;
     const defaultPath = {
-        x: player.pos.x * NODE_SIZE.width,
-        y: player.pos.y * NODE_SIZE.height
+        x: player.getPos().x * NODE_SIZE.width,
+        y: player.getPos().y * NODE_SIZE.height
     };
     context.beginPath();
-    switch (player.angle) {
+    switch (player.getAngle()) {
         case 'down':
             context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.1));
             context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.1));
