@@ -183,6 +183,7 @@ const EXP_TABLE: NextExp[] = [
   {level:  7, nextExp:  10},
   {level:  8, nextExp:  10},
   {level:  9, nextExp:  10},
+  {level: 10, nextExp:  10},
 ]
 
 const MAX_LEVEL = 10;
@@ -202,6 +203,8 @@ const gUsableBattleCommand = [
 const gEnemys: Enemy[] = [] ;
 
 let gBattle: Battle | null = null;
+
+let gEnemyId: number = 2;
 
 const gMap = [
   0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -761,8 +764,8 @@ const main = () => {
   context.font = FONT.message.toString() + "px sans-serif";
 
   const player = new Player({x: 0, y: 0}, PLAYER_ID);
-  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, 2));
-  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, 3));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, gEnemyId++));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, gEnemyId++));
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     switch (gScene) {
@@ -806,7 +809,10 @@ const updateView = (player: Player): void => {
 
   switch(gScene) {
     case SCENE.moveMap:
-      moveNPCs();
+      moveEnemys();
+      if(gEnemys.length < 2){
+        popEnemy();
+      }
       dispMoveMapScene(context, player);
       break;
     case SCENE.battle:
@@ -824,12 +830,41 @@ const updateView = (player: Player): void => {
   context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 }
 
-const moveNPCs = () => {
-  if(gFrameCounter % 15 === 0){
-    gEnemys.map((value) => {
-      value.randomMove();
-    });
+const moveEnemys = () => {
+  if(gFrameCounter % 15 !== 0){
+    return;
   }
+  gEnemys.map((value) => {
+    value.randomMove();
+  });
+}
+
+const popEnemy = () => {
+  if(gFrameCounter % 30 !== 0){
+    return;
+  }
+  if(getRandomInt(0, 2) < 1){
+    return;
+  }
+  let popPos: Position;
+  do{
+    popPos = {
+      x: getRandomInt(0, FIELD_SIZE.x),
+      y: getRandomInt(0, FIELD_SIZE.y)
+    };
+
+    if (isMapOver(popPos)){
+      continue;
+    }
+    if (!canWalkInto(popPos)){
+      continue;
+    }
+    if (checkCollision(popPos)){
+      continue;
+    }
+    break;
+  }while(1);
+  gEnemys.push(new Enemy(popPos, gEnemyId++));
 }
 
 const dispBackground = (context: CanvasRenderingContext2D) => {
@@ -906,8 +941,8 @@ const dispGameOverScene = (context: CanvasRenderingContext2D) => {
   context.font = FONT.message.toString() + "px sans-serif";
 }
 
-const getRandomInt = (min: number, max: number): number => {
-  return Math.floor(Math.random() * max + min);
+const getRandomInt = (min: number, amount: number): number => {
+  return Math.floor(Math.random() * amount + min);
 }
 
 const getNextPos = (pos: Position, angle: Angle): Position => {
