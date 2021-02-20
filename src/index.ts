@@ -191,9 +191,33 @@ const EXP_TABLE: NextExp[] = [
 const MAX_LEVEL = 10;
 
 const ENEMY_IMAGE_PATH = {
-  a: '../image/enemyA.png',
-  b: '../image/enemyB.png',
-  c: '../image/enemyC.png'
+  a: {
+    battle: '../image/enemyA.png',
+    mini: {
+      up: '',
+      down: '../image/enemyAMiniDown.png',
+      right: '',
+      left: '',
+    }
+  },
+  b: {
+    battle: '../image/enemyB.png',
+    mini: {
+      up: '',
+      down: '',
+      right: '',
+      left: '',
+    }
+  },
+  c: {
+    battle: '../image/enemyC.png',
+    mini: {
+      up: '',
+      down: '',
+      right: '',
+      left: '',
+    }
+  },
 }
 
 const PLAYER_IMAGE_PATH = {
@@ -207,7 +231,7 @@ const ENEMY_A = {
   maxHp: 50,
   atack: 7,
   exp: 100,
-  imgPath: '../image/enemyA.png',
+  imgPath: ENEMY_IMAGE_PATH.a,
   isMove: false,
   moveScene: true
 }
@@ -216,7 +240,7 @@ const ENEMY_B = {
   maxHp: 15,
   atack: 5,
   exp: 100,
-  imgPath: '../image/enemyB.png',
+  imgPath: ENEMY_IMAGE_PATH.b,
   isMove: true,
   moveScene: false
 }
@@ -225,7 +249,7 @@ const ENEMY_C = {
   maxHp: 10,
   atack: 3,
   exp: 15,
-  imgPath: '../image/enemyC.png',
+  imgPath: ENEMY_IMAGE_PATH.c,
   isMove: true,
   moveScene: false
 }
@@ -588,7 +612,7 @@ class Enemy extends Charactor {
   private atack: number;
   private enemyType: string;
   private exp: number;
-  private imgPath: string;
+  private imgPath;
   private isMove: boolean;
   private moveScene: boolean;
 
@@ -643,7 +667,7 @@ class Enemy extends Charactor {
     return this.exp;
   }
 
-  getImgPath = (): string => {
+  getImgPath = () => {
     return this.imgPath
   }
 
@@ -842,7 +866,7 @@ class Battle {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
     const img = new Image();
-    img.src = this.enemy.getImgPath();
+    img.src = this.enemy.getImgPath().battle;
     context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
     switch(this.battlePhese){
       case BATTLE_PHASE.start:
@@ -1094,7 +1118,7 @@ const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => 
   dispField(context);
   dispPlayer(context, player);
   gEnemys.map((value) => {
-    dispCharactor(context, value, COLOR.red);
+    dispEnemy(context, value, COLOR.red);
   });
 }
 
@@ -1135,43 +1159,69 @@ const dispPlayer = (context: CanvasRenderingContext2D, player: Player) => {
   context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
 }
 
-const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, color: string) => {
+const dispEnemy = (context: CanvasRenderingContext2D, enemy: Enemy, color: string) => {
 
   context.fillStyle = color;
 
   const defaultPath = {
-    x: player.getPos().x * NODE_SIZE.width,
-    y: player.getPos().y * NODE_SIZE.height
+    x: enemy.getPos().x * NODE_SIZE.width,
+    y: enemy.getPos().y * NODE_SIZE.height
   }
 
-  context.beginPath();
+  let img = new Image();
 
-  switch (player.getAngle()) {
+  switch (enemy.getAngle()) {
     case 'down':
+      if(enemy.getImgPath().mini.down !== ''){
+        img.src = enemy.getImgPath().mini.down;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width, NODE_SIZE.height);
+        break;
+      }
+      context.beginPath();
       context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.1));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.1));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.9));
+      context.fill();
       break;
     case 'right':
+      if(enemy.getImgPath().mini.right !== ''){
+        img.src = enemy.getImgPath().mini.right;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width, NODE_SIZE.height);
+        break;
+      }
+      context.beginPath();
       context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.2));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.5));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.8));
+      context.fill();
       break;
     case 'up':
+      if(enemy.getImgPath().mini.up !== ''){
+        img.src = enemy.getImgPath().mini.up;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width, NODE_SIZE.height);
+        break;
+      }
+      context.beginPath();
       context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.9));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.1));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.9));
+      context.fill();
       break;
     case 'left':
+      if(enemy.getImgPath().mini.left !== ''){
+        img.src = enemy.getImgPath().mini.left;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width, NODE_SIZE.height);
+        break;
+      }
+      context.beginPath();
       context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.2));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.5));
       context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.8));
+      context.fill();
       break;
     default:
       break;
   }
-
-  context.fill();
 
 }
 
