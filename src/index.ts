@@ -96,6 +96,7 @@ const CONSOLE_SPACE_SIZE = {
 const SCENE = {
   moveMap: 0,
   battle: 1,
+  gameClear: 50,
   gameOver: 99
 }
 
@@ -189,11 +190,72 @@ const EXP_TABLE: NextExp[] = [
 
 const MAX_LEVEL = 10;
 
+const ENEMY_IMAGE_PATH = {
+  a: '../image/enemyA.png',
+  b: '../image/enemyB.png',
+  c: '../image/enemyC.png'
+}
+
+const PLAYER_IMAGE_PATH = {
+  up: '../image/playerUp.png',
+  down: '../image/playerDown.png',
+  right: '../image/playerRight.png',
+  left: '../image/playerLeft.png'
+}
+
+const ENEMY_A = {
+  maxHp: 50,
+  atack: 7,
+  exp: 100,
+  imgPath: '../image/enemyA.png',
+  isMove: false,
+  moveScene: true
+}
+
+const ENEMY_B = {
+  maxHp: 15,
+  atack: 5,
+  exp: 100,
+  imgPath: '../image/enemyB.png',
+  isMove: true,
+  moveScene: false
+}
+
+const ENEMY_C = {
+  maxHp: 10,
+  atack: 3,
+  exp: 15,
+  imgPath: '../image/enemyC.png',
+  isMove: true,
+  moveScene: false
+}
+
+const ENEMY_A_POSITION: Position = {
+  x: FIELD_SIZE.x - 1,
+  y: 16
+}
+
+const ENEMY_STATUS_TABLE = [{
+  type: 'a',
+  status: ENEMY_A,
+},
+{
+  type: 'b',
+  status: ENEMY_B,
+},
+{
+  type: 'c',
+  status: ENEMY_C,
+},
+]
+
 let gPressString: string = '';
 
 let gFrameCounter: number = 0;
 
 let gScene = SCENE.moveMap;
+
+let gClearFrame = 0;
 
 const gUsableBattleCommand = [
   'たたかう',
@@ -446,6 +508,9 @@ class Player extends Charactor {
   }
 
   levelUp = () => {
+    if(this.lv >= MAX_LEVEL){
+      return;
+    }
     this.lv++;
     const nextStatus = PLAYER_STATUS_TABLE[
       PLAYER_STATUS_TABLE.findIndex((value) =>{
@@ -511,22 +576,43 @@ class Player extends Charactor {
   getHp = (): number => {
     return this.hp
   }
+
+  getLv = (): number => {
+    return this.lv
+  }
 }
 
 class Enemy extends Charactor {
   private maxHp: number;
   private hp: number;
   private atack: number;
+  private enemyType: string;
+  private exp: number;
+  private imgPath: string;
+  private isMove: boolean;
+  private moveScene: boolean;
 
-  constructor (startPos: Position, playerId: number) {
+  constructor (startPos: Position, playerId: number, enemyType: string) {
     super(startPos, playerId);
-
-    this.maxHp = 10;
+    this.enemyType = enemyType;
+    let index = ENEMY_STATUS_TABLE.findIndex((value) => {return value.type === this.enemyType;})
+    if(index === -1){
+      index = 2
+    }
+    const enemyStatus = ENEMY_STATUS_TABLE[index].status;
+    this.maxHp = enemyStatus.maxHp;
     this.hp = this.maxHp;
-    this.atack = 3;
+    this.exp = enemyStatus.exp;
+    this.atack = enemyStatus.atack;
+    this.imgPath = enemyStatus.imgPath;
+    this.isMove = enemyStatus.isMove;
+    this.moveScene = enemyStatus.moveScene;
   }
 
   randomMove(){
+    if(!this.isMove){
+      return;
+    }
     const rand = getRandomInt(0, 4);
     switch(rand) {
       case 0:
@@ -553,6 +639,22 @@ class Enemy extends Charactor {
     return this.atack;
   }
 
+  getExp = (): number => {
+    return this.exp;
+  }
+
+  getImgPath = (): string => {
+    return this.imgPath
+  }
+
+  getIsMove = (): boolean => {
+    return this.isMove
+  }
+
+  getMoveScene = (): boolean => {
+    return this.moveScene
+  }
+
 }
 
 class Battle {
@@ -565,7 +667,7 @@ class Battle {
   private message: string | undefined;
   private messageBuffer: string[] = [];
   private battleEndType: number = BATTLE_END_TYPE.false;
-  private getExp: number = 15;
+  private getExp: number;
   private enemy: Enemy;
 
   constructor (pos: Position, battleCommand: string[], player: Player, playerMoveTo: Angle, enemy: Enemy) {
@@ -575,6 +677,7 @@ class Battle {
     this.playerMoveTo = playerMoveTo;
     this.enemy = enemy;
     this.setMessage(BATTLE_START_MESSAGE);
+    this.getExp = this.enemy.getExp();
   }
 
   inputEvent = (event: KeyboardEvent) => {
@@ -693,11 +796,18 @@ class Battle {
       case BATTLE_END_TYPE.win:
         this.player.getExp(this.getExp);
         this.getExp = 0;
-        if(this.player.getToLevelUp() <= 0){
-          this.message = this.player.levelUp();
-          break;
+        if(this.player.getLv() < MAX_LEVEL){
+          if(this.player.getToLevelUp() <= 0){
+            this.message = this.player.levelUp();
+            break;
+          }
         }
-        gScene = SCENE.moveMap;
+        if(this.enemy.getMoveScene()){
+          gClearFrame = gFrameCounter;
+          gScene = SCENE.gameClear;
+        }else{
+          gScene = SCENE.moveMap;
+        }
         this.removeEnemy();
         gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
         this.player.moveToPos(this.battlePos, this.playerMoveTo);
@@ -731,6 +841,9 @@ class Battle {
   dispBattleScene = (context: CanvasRenderingContext2D) => {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+    const img = new Image();
+    img.src = this.enemy.getImgPath();
+    context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
     switch(this.battlePhese){
       case BATTLE_PHASE.start:
         this.dispBattleStartMessagePhase(context);
@@ -855,8 +968,9 @@ const main = () => {
   context.font = FONT.message.toString() + "px sans-serif";
 
   const player = new Player({x: 0, y: 0}, PLAYER_ID);
-  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, gEnemyId++));
-  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, gEnemyId++));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1}, gEnemyId++, 'c'));
+  gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, gEnemyId++, 'c'));
+  gEnemys.push(new Enemy(ENEMY_A_POSITION, gEnemyId++, 'a'));
 
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     switch (gScene) {
@@ -912,8 +1026,12 @@ const updateView = (player: Player): void => {
       }
       gBattle.dispBattleScene(context);
       break;
+    case SCENE.gameClear:
+      dispGameClearScene(context);
+      break;
     case SCENE.gameOver:
       dispGameOverScene(context);
+      break;
   }
 
   context.fillStyle = COLOR.black;
@@ -934,7 +1052,8 @@ const popEnemy = () => {
   if(gFrameCounter % 30 !== 0){
     return;
   }
-  if(getRandomInt(0, 2) < 1){
+  const rand = getRandomInt(0, 10);
+  if(rand < 5){
     return;
   }
   let popPos: Position;
@@ -955,7 +1074,15 @@ const popEnemy = () => {
     }
     break;
   }while(1);
-  gEnemys.push(new Enemy(popPos, gEnemyId++));
+
+  let enemyType;
+  if(rand < 8){
+    enemyType = 'c'
+  }else{
+    enemyType = 'b'
+  }
+
+  gEnemys.push(new Enemy(popPos, gEnemyId++, enemyType));
 }
 
 const dispBackground = (context: CanvasRenderingContext2D) => {
@@ -965,7 +1092,7 @@ const dispBackground = (context: CanvasRenderingContext2D) => {
 
 const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => {
   dispField(context);
-  dispCharactor(context, player, COLOR.blue);
+  dispPlayer(context, player);
   gEnemys.map((value) => {
     dispCharactor(context, value, COLOR.red);
   });
@@ -981,6 +1108,31 @@ const dispField = (context: CanvasRenderingContext2D): void => {
       context.fillText(gPlayerField[index].toString(), NODE_SIZE.width * pos.x, NODE_SIZE.height * (pos.y + 1))
     }
   })
+}
+
+const dispPlayer = (context: CanvasRenderingContext2D, player: Player) => {
+  let img = new Image();
+  const pos = player.getPos();
+  
+  switch (player.getAngle()) {
+    case 'down':
+      img.src = PLAYER_IMAGE_PATH.down;
+      break;
+    case 'right':
+      img.src = PLAYER_IMAGE_PATH.right;
+      break;
+    case 'up':
+      img.src = PLAYER_IMAGE_PATH.up;
+      break;
+    case 'left':
+      img.src = PLAYER_IMAGE_PATH.left;
+      break;
+    default:
+      img.src = PLAYER_IMAGE_PATH.down;
+      break;
+  }
+
+  context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
 }
 
 const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, color: string) => {
@@ -1021,6 +1173,16 @@ const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, col
 
   context.fill();
 
+}
+
+const dispGameClearScene = (context: CanvasRenderingContext2D) => {
+  context.fillStyle = COLOR.black;
+  context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
+  context.fillStyle = COLOR.white;
+  context.font = FONT.gameOver.toString() + "px sans-serif";
+  context.fillText('GAME CLEAR', NODE_SIZE.width * (FIELD_SIZE.x / 2 - 13), NODE_SIZE.height * (FIELD_SIZE.y / 2 + 1));
+  context.font = FONT.message.toString() + "px sans-serif";
+  context.fillText(`Clear Frame: ${gClearFrame}`, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 13), NODE_SIZE.height * (FIELD_SIZE.y / 2 + 3));
 }
 
 const dispGameOverScene = (context: CanvasRenderingContext2D) => {
@@ -1070,6 +1232,33 @@ const roundedRect = (context: CanvasRenderingContext2D, x: number, y: number, wi
   context.lineTo(x + radius, y);
   context.arcTo(x, y, x, y + radius, radius);
   context.stroke();
+}
+
+
+
+const test = () => {
+  const canvas = <HTMLCanvasElement>document.getElementById("main");
+
+  if(!canvas.getContext){
+    alert("canvas is not found");
+    throw new Error("canvas is not found");
+  }
+
+  canvas.height = CANVAS_SIZE.height;
+  canvas.width = CANVAS_SIZE.width;
+
+  const context = getCanvasRenderingContext2D(canvas);
+
+  context.font = FONT.message.toString() + "px sans-serif";
+
+  context.fillStyle = COLOR.black;
+  context.fillRect(0, 0, 1000, 1000);
+
+  const img = new Image();
+  img.src = "../image/enemyA.png";
+  img.onload = () => {
+    context.drawImage(img, 0, 0);
+  }
 }
 
 window.onload = main;
