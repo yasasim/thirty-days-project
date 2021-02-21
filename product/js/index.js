@@ -970,8 +970,7 @@ const popEnemy = () => {
     if (gFrameCounter % 30 !== 0) {
         return;
     }
-    const rand = getRandomInt(0, 10);
-    if (rand < 5) {
+    if (processPercentage(50)) {
         return;
     }
     let popPos;
@@ -992,7 +991,7 @@ const popEnemy = () => {
         break;
     } while (1);
     let enemyType;
-    if (rand < 8) {
+    if (processPercentage(60)) {
         enemyType = 'c';
     }
     else {
