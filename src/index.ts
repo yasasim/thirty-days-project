@@ -1261,4 +1261,9 @@ const test = () => {
   }
 }
 
+const processPercentage = (parcentage: number): boolean => {
+  const rand = getRandomInt(0, 100);
+  return rand < parcentage;
+}
+
 window.onload = main;

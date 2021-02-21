@@ -1028,4 +1028,8 @@ const test = () => {
         context.drawImage(img, 0, 0);
     };
 };
+const processPercentage = (parcentage) => {
+    const rand = getRandomInt(0, 100);
+    return rand < parcentage;
+};
 window.onload = main;
