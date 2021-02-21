@@ -19,6 +19,11 @@ interface NextExp {
   nextExp: number
 }
 
+interface Size {
+  width: number,
+  height: number
+}
+
 type Angle = 'up' | 'right' | 'down' | 'left'
 
 const DEBUG_MODE = false;
@@ -158,9 +163,8 @@ const BATTLE_END_MESSAGE = {
   lose: ['プレイヤーは死んでしまった！！']
 }
 
-const RV_BATTLE_START = 2;
-const RV_CANNOT_MOVE = -1;
-const RV_MOVE_EXECUTE = 1;
+const RV_CANNOT_MOVE = -2;
+const RV_MOVE_EXECUTE = -1;
 
 const PLAYER_STATUS_TABLE: PlayerStatus[] = [
   {level:  1, maxHp:  10, atack:  3},
@@ -191,9 +195,33 @@ const EXP_TABLE: NextExp[] = [
 const MAX_LEVEL = 10;
 
 const ENEMY_IMAGE_PATH = {
-  a: '../image/enemyA.png',
-  b: '../image/enemyB.png',
-  c: '../image/enemyC.png'
+  a: {
+    battle: '../image/enemyA.png',
+    mini: {
+      up: '',
+      down: '../image/castle.png',
+      right: '',
+      left: '',
+    }
+  },
+  b: {
+    battle: '../image/enemyB.png',
+    mini: {
+      up: '',
+      down: '',
+      right: '',
+      left: '',
+    }
+  },
+  c: {
+    battle: '../image/enemyC.png',
+    mini: {
+      up: '',
+      down: '',
+      right: '',
+      left: '',
+    }
+  },
 }
 
 const PLAYER_IMAGE_PATH = {
@@ -207,32 +235,44 @@ const ENEMY_A = {
   maxHp: 50,
   atack: 7,
   exp: 100,
-  imgPath: '../image/enemyA.png',
+  imgPath: ENEMY_IMAGE_PATH.a,
   isMove: false,
-  moveScene: true
+  moveScene: true,
+  size: {
+    width: 2,
+    height: 2
+  }
 }
 
 const ENEMY_B = {
   maxHp: 15,
   atack: 5,
   exp: 100,
-  imgPath: '../image/enemyB.png',
+  imgPath: ENEMY_IMAGE_PATH.b,
   isMove: true,
-  moveScene: false
+  moveScene: false,
+  size: {
+    width: 1,
+    height: 1
+  }
 }
 
 const ENEMY_C = {
   maxHp: 10,
   atack: 3,
   exp: 15,
-  imgPath: '../image/enemyC.png',
+  imgPath: ENEMY_IMAGE_PATH.c,
   isMove: true,
-  moveScene: false
+  moveScene: false,
+  size: {
+    width: 1,
+    height: 1
+  }
 }
 
 const ENEMY_A_POSITION: Position = {
-  x: FIELD_SIZE.x - 1,
-  y: 16
+  x: FIELD_SIZE.x - 2,
+  y: 15
 }
 
 const ENEMY_STATUS_TABLE = [{
@@ -343,34 +383,67 @@ const getIndexFromPos = (pos: Position): number => {
   return pos.y * FIELD_SIZE.x + pos.x;
 }
 
-const isMapOver = (pos: Position): boolean => {
-  if(pos.x >= FIELD_SIZE.x) {
-    return true;
+const getEnemyStatusFromType = (type: string) => {
+  let index = ENEMY_STATUS_TABLE.findIndex((value) => {return value.type === type;})
+  if(index === -1){
+    index = 2
   }
-  if(pos.x < 0) {
-    return true;
-  }
-  if(pos.y >= FIELD_SIZE.y) {
-    return true;
-  }
-  if(pos.y < 0) {
-    return true;
+  return ENEMY_STATUS_TABLE[index].status;
+}
+
+const isMapOver = (pos: Position, size: Size): boolean => {
+  for(let xx = 0; xx < size.width; xx++){
+    for(let yy = 0; yy < size.height; yy++){
+      if(pos.x + xx >= FIELD_SIZE.x) {
+        return true;
+      }
+      if(pos.x + xx < 0) {
+        return true;
+      }
+      if(pos.y + yy >= FIELD_SIZE.y) {
+        return true;
+      }
+      if(pos.y + yy < 0) {
+        return true;
+      }
+    }
   }
   return false;
 }
 
-const canWalkInto = (pos: Position): boolean => {
-  return FIELDS[gMap[getIndexFromPos(pos)]].byWalk;
+const canWalkInto = (pos: Position, size: Size): boolean => {
+  for(let xx = 0; xx < size.width; xx++){
+    for(let yy = 0; yy < size.height; yy++){
+      const checkPos: Position = {
+        x: pos.x + xx,
+        y: pos.y + yy
+      }
+      if(!FIELDS[gMap[getIndexFromPos(checkPos)]].byWalk){
+        return false;
+      };
+    }
+  }
+  return true;
 }
 
-const checkCollision = (pos: Position): boolean => {
-  return gPlayerField[getIndexFromPos(pos)] !== EMPTY;
+const checkCollision = (pos: Position, size: Size, myId: number): Position | undefined => {
+  for(let xx = 0; xx < size.width; xx++){
+    for(let yy = 0; yy < size.height; yy++){
+      const checkPos: Position = {
+        x: pos.x + xx,
+        y: pos.y + yy
+      }
+      if(gPlayerField[getIndexFromPos(checkPos)] !== EMPTY && gPlayerField[getIndexFromPos(checkPos)] !== myId){
+        return checkPos;
+      };
+    }
+  }
+  return;
 }
 
-const startBattle = (player: Player, playerTo: Angle) => {
+const startBattle = (player: Player, playerTo: Angle, enemyId: number) => {
   gScene = SCENE.battle;
   const pos = getNextPos(player.getPos(), playerTo)
-  const enemyId = gPlayerField[getIndexFromPos(pos)];
   const index = gEnemys.findIndex((value) => {
     return value.getId() === enemyId
   });
@@ -384,31 +457,69 @@ const startBattle = (player: Player, playerTo: Angle) => {
 class Charactor {
   private pos: Position;
   private angle: Angle;
-  private playerId: number;
+  private charactorId: number;
+  private size: Size;
 
-  constructor (startPos: Position, playerId: number) {
+  constructor (startPos: Position, charactorId: number, size?: Size) {
     this.pos = startPos;
     this.angle = 'down';
-    this.playerId = playerId;
-    gPlayerField[getIndexFromPos(startPos)] = playerId;
+    this.charactorId = charactorId;
+    if(size){
+      this.size = size;
+    }else{
+      this.size = {
+        width: 1,
+        height: 1
+      }
+    }
+    for(let xx = 0; xx < this.size.width; xx++){
+      for(let yy = 0; yy < this.size.height; yy++){
+        const setPos: Position = {
+          x: this.pos.x + xx,
+          y: this.pos.y + yy
+        }
+        gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
+      }
+    }
   }
 
   moveExecute = (pos: Position) => {
-    if (isMapOver(pos)){
+    if (isMapOver(pos, this.size)){
       return RV_CANNOT_MOVE;
     }
-    if (!canWalkInto(pos)){
+    if (!canWalkInto(pos, this.size)){
       return RV_CANNOT_MOVE;
     }
-    if (checkCollision(pos)){
-      if ( this.playerId != PLAYER_ID ){
+    const collision = checkCollision(pos, this.size, this.charactorId);
+    if (collision !== undefined){
+      if ( this.charactorId != PLAYER_ID ){
         return RV_CANNOT_MOVE;
       }
-      return RV_BATTLE_START;
+      return gPlayerField[getIndexFromPos(collision)];
     }
-    gPlayerField[getIndexFromPos(this.pos)] = EMPTY;
+    for(let xx = 0; xx < this.size.width; xx++){
+      for(let yy = 0; yy < this.size.height; yy++){
+        const resetPos: Position = {
+          x: this.pos.x + xx,
+          y: this.pos.y + yy
+        }
+        console.log('reset');
+        console.log(resetPos);
+        gPlayerField[getIndexFromPos(resetPos)] = EMPTY;
+      }
+    }
     this.pos = pos;
-    gPlayerField[getIndexFromPos(this.pos)] = this.playerId;
+    for(let xx = 0; xx < this.size.width; xx++){
+      for(let yy = 0; yy < this.size.height; yy++){
+        const setPos: Position = {
+          x: this.pos.x + xx,
+          y: this.pos.y + yy
+        }
+        console.log('set');
+        console.log(setPos);
+        gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
+      }
+    }
     return RV_MOVE_EXECUTE;
   }
 
@@ -453,8 +564,22 @@ class Charactor {
     return this.moveExecute(pos);
   }
 
+  resetPlayerField = () => {
+    for(let xx = 0; xx < this.size.width; xx++){
+      for(let yy = 0; yy < this.size.height; yy++){
+        const resetPos: Position = {
+          x: this.pos.x + xx,
+          y: this.pos.y + yy
+        }
+        if(gPlayerField[getIndexFromPos(resetPos)] === this.charactorId){
+          gPlayerField[getIndexFromPos(resetPos)] = EMPTY
+        }
+      }
+    }
+  }
+
   getId = () => {
-    return this.playerId;
+    return this.charactorId;
   }
 
   getPos = (): Position => {
@@ -463,6 +588,10 @@ class Charactor {
 
   getAngle = (): Angle => {
     return this.angle
+  }
+
+  getSize = (): Size => {
+    return this.size
   }
 
 }
@@ -475,8 +604,8 @@ class Player extends Charactor {
   private playerName: string = 'プレイヤー';
   private atack: number;
 
-  constructor (startPos: Position, playerId: number) {
-    super(startPos, playerId);
+  constructor (startPos: Position, playerId: number, size?: Size) {
+    super(startPos, playerId, size);
     this.lv = 1;
     const startStatus = PLAYER_STATUS_TABLE[
       PLAYER_STATUS_TABLE.findIndex((value) =>{
@@ -555,8 +684,8 @@ class Player extends Charactor {
       default:
         return;
     }
-    if(retval === RV_BATTLE_START) {
-      startBattle(this, playerTo);
+    if(retval >= 0) {
+      startBattle(this, playerTo, retval);
     }
   }
 
@@ -588,18 +717,14 @@ class Enemy extends Charactor {
   private atack: number;
   private enemyType: string;
   private exp: number;
-  private imgPath: string;
+  private imgPath;
   private isMove: boolean;
   private moveScene: boolean;
 
-  constructor (startPos: Position, playerId: number, enemyType: string) {
-    super(startPos, playerId);
+  constructor (startPos: Position, playerId: number, enemyType: string, size?: Size) {
+    super(startPos, playerId, size ? size : getEnemyStatusFromType(enemyType).size);
     this.enemyType = enemyType;
-    let index = ENEMY_STATUS_TABLE.findIndex((value) => {return value.type === this.enemyType;})
-    if(index === -1){
-      index = 2
-    }
-    const enemyStatus = ENEMY_STATUS_TABLE[index].status;
+    const enemyStatus = getEnemyStatusFromType(this.enemyType);
     this.maxHp = enemyStatus.maxHp;
     this.hp = this.maxHp;
     this.exp = enemyStatus.exp;
@@ -643,7 +768,7 @@ class Enemy extends Charactor {
     return this.exp;
   }
 
-  getImgPath = (): string => {
+  getImgPath = () => {
     return this.imgPath
   }
 
@@ -809,7 +934,6 @@ class Battle {
           gScene = SCENE.moveMap;
         }
         this.removeEnemy();
-        gPlayerField[getIndexFromPos(this.battlePos)] = EMPTY;
         this.player.moveToPos(this.battlePos, this.playerMoveTo);
         break;
       case BATTLE_END_TYPE.escape:
@@ -842,7 +966,7 @@ class Battle {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
     const img = new Image();
-    img.src = this.enemy.getImgPath();
+    img.src = this.enemy.getImgPath().battle;
     context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
     switch(this.battlePhese){
       case BATTLE_PHASE.start:
@@ -942,6 +1066,7 @@ class Battle {
   }
 
   private removeEnemy = () => {
+    this.enemy.resetPlayerField();
     const index = gEnemys.findIndex((value) => {
       return value.getId() === this.enemy.getId();
     });
@@ -1063,13 +1188,13 @@ const popEnemy = () => {
       y: getRandomInt(0, FIELD_SIZE.y)
     };
 
-    if (isMapOver(popPos)){
+    if (isMapOver(popPos, {width: 1, height: 1})){
       continue;
     }
-    if (!canWalkInto(popPos)){
+    if (!canWalkInto(popPos, {width: 1, height: 1})){
       continue;
     }
-    if (checkCollision(popPos)){
+    if (checkCollision(popPos, {width: 1, height: 1}, gEnemyId)){
       continue;
     }
     break;
@@ -1094,7 +1219,7 @@ const dispMoveMapScene = (context: CanvasRenderingContext2D, player: Player) => 
   dispField(context);
   dispPlayer(context, player);
   gEnemys.map((value) => {
-    dispCharactor(context, value, COLOR.red);
+    dispEnemy(context, value, COLOR.red);
   });
 }
 
@@ -1113,6 +1238,7 @@ const dispField = (context: CanvasRenderingContext2D): void => {
 const dispPlayer = (context: CanvasRenderingContext2D, player: Player) => {
   let img = new Image();
   const pos = player.getPos();
+  const playerSize = player.getSize();
   
   switch (player.getAngle()) {
     case 'down':
@@ -1132,46 +1258,73 @@ const dispPlayer = (context: CanvasRenderingContext2D, player: Player) => {
       break;
   }
 
-  context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width, NODE_SIZE.height);
+  context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * playerSize.width, NODE_SIZE.height * playerSize.height);
 }
 
-const dispCharactor = (context: CanvasRenderingContext2D, player: Charactor, color: string) => {
+const dispEnemy = (context: CanvasRenderingContext2D, enemy: Enemy, color: string) => {
 
   context.fillStyle = color;
 
   const defaultPath = {
-    x: player.getPos().x * NODE_SIZE.width,
-    y: player.getPos().y * NODE_SIZE.height
+    x: enemy.getPos().x * NODE_SIZE.width,
+    y: enemy.getPos().y * NODE_SIZE.height
   }
 
-  context.beginPath();
+  let img = new Image();
+  const enemySize = enemy.getSize();
 
-  switch (player.getAngle()) {
+  switch (enemy.getAngle()) {
     case 'down':
-      context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.1));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.1));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.9));
+      if(enemy.getImgPath().mini.down !== ''){
+        img.src = enemy.getImgPath().mini.down;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
+        break;
+      }
+      context.beginPath();
+      context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+      context.fill();
       break;
     case 'right':
-      context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.2));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.5));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.8));
+      if(enemy.getImgPath().mini.right !== ''){
+        img.src = enemy.getImgPath().mini.right;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
+        break;
+      }
+      context.beginPath();
+      context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+      context.fill();
       break;
     case 'up':
-      context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.2), defaultPath.y + (NODE_SIZE.height * 0.9));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.5), defaultPath.y + (NODE_SIZE.height * 0.1));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.8), defaultPath.y + (NODE_SIZE.height * 0.9));
+      if(enemy.getImgPath().mini.up !== ''){
+        img.src = enemy.getImgPath().mini.up;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
+        break;
+      }
+      context.beginPath();
+      context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+      context.fill();
       break;
     case 'left':
-      context.moveTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.2));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.1), defaultPath.y + (NODE_SIZE.height * 0.5));
-      context.lineTo(defaultPath.x + (NODE_SIZE.width * 0.9), defaultPath.y + (NODE_SIZE.height * 0.8));
+      if(enemy.getImgPath().mini.left !== ''){
+        img.src = enemy.getImgPath().mini.left;
+        context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
+        break;
+      }
+      context.beginPath();
+      context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
+      context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+      context.fill();
       break;
     default:
       break;
   }
-
-  context.fill();
 
 }
 
