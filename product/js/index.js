@@ -104,15 +104,16 @@ const BATTLE_TEXT_FIELD = {
         left: 0.5
     }
 };
-const BATTLE_START_MESSAGE = ['魔物があらわれた！！'];
+const BATTLE_START_MESSAGE = 'NAMEがあらわれた！！';
 const BATTLE_COMMAND_EXECUTE_MESSAGE = {
-    attack: ['プレイヤーの攻撃！！'],
-    escape: ['プレイヤーは逃げ出した！！'],
-    nothing: ['しかし何も起こらなかった！！']
+    attack: 'NAMEの攻撃！！',
+    escape: 'NAMEは逃げ出した！！',
+    nothing: 'しかし何も起こらなかった！！'
 };
+const BATTLE_RECIEVE_DAMAGE_MESSAGE = 'NAMEにDAMAGEのダメージ！！';
 const BATTLE_END_MESSAGE = {
-    removeEnemy: ['魔物をやっつけた！！'],
-    lose: ['プレイヤーは死んでしまった！！']
+    removeEnemy: 'NAMEをやっつけた！！',
+    lose: 'NAMEは死んでしまった！！'
 };
 const RV_CANNOT_MOVE = -2;
 const RV_MOVE_EXECUTE = -1;
@@ -177,6 +178,7 @@ const PLAYER_IMAGE_PATH = {
     left: '../image/playerLeft.png'
 };
 const ENEMY_A = {
+    name: 'ラスボス',
     maxHp: 50,
     atack: 7,
     exp: 100,
@@ -189,6 +191,7 @@ const ENEMY_A = {
     }
 };
 const ENEMY_B = {
+    name: 'レアザコ',
     maxHp: 15,
     atack: 5,
     exp: 100,
@@ -201,6 +204,7 @@ const ENEMY_B = {
     }
 };
 const ENEMY_C = {
+    name: 'ザコ',
     maxHp: 10,
     atack: 3,
     exp: 15,
@@ -381,7 +385,7 @@ const startBattle = (player, playerTo, enemyId) => {
     gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy);
 };
 class Charactor {
-    constructor(startPos, charactorId, size) {
+    constructor(startPos, charactorId, name, size) {
         this.moveExecute = (pos) => {
             if (isMapOver(pos, this.size)) {
                 return RV_CANNOT_MOVE;
@@ -482,9 +486,13 @@ class Charactor {
         this.getSize = () => {
             return this.size;
         };
+        this.getName = () => {
+            return this.name;
+        };
         this.pos = startPos;
         this.angle = 'down';
         this.charactorId = charactorId;
+        this.name = name;
         if (size) {
             this.size = size;
         }
@@ -507,7 +515,7 @@ class Charactor {
 }
 class Player extends Charactor {
     constructor(startPos, playerId, size) {
-        super(startPos, playerId, size);
+        super(startPos, playerId, 'プレイヤー', size);
         this.playerName = 'プレイヤー';
         this.dispPlayerStatus = (context) => {
             context.fillStyle = COLOR.black;
@@ -598,7 +606,7 @@ class Player extends Charactor {
 }
 class Enemy extends Charactor {
     constructor(startPos, playerId, enemyType, size) {
-        super(startPos, playerId, size ? size : getEnemyStatusFromType(enemyType).size);
+        super(startPos, playerId, getEnemyStatusFromType(enemyType).name, size ? size : getEnemyStatusFromType(enemyType).size);
         this.recieveDamage = (damage) => {
             this.hp -= damage;
             return this.hp > 0;
@@ -702,16 +710,16 @@ class Battle {
             let flgTmp;
             switch (this.battleCommandCursorPos) {
                 case 0:
-                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.player.getName()));
                     flgTmp = this.enemy.recieveDamage(this.player.getAtack());
-                    this.setMessage([`魔物に${this.player.getAtack()}のダメージ！！`]);
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.enemy.getName()).replace('DAMAGE', this.player.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.win;
                         break;
                     }
-                    this.setMessage([`魔物の攻撃！！`]);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.enemy.getName()));
                     flgTmp = this.player.recieveDamage(this.enemy.getAtack());
-                    this.setMessage([`プレイヤーに${this.enemy.getAtack()}のダメージ！！`]);
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.player.getName()).replace('DAMAGE', this.enemy.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
@@ -723,7 +731,9 @@ class Battle {
                     break;
                 case 2:
                     this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.nothing);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.enemy.getName()));
                     flgTmp = this.player.recieveDamage(this.enemy.getAtack());
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.player.getName()).replace('DAMAGE', this.enemy.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
@@ -738,7 +748,7 @@ class Battle {
             }
             switch (this.battleEndType) {
                 case BATTLE_END_TYPE.win:
-                    this.setMessage(BATTLE_END_MESSAGE.removeEnemy);
+                    this.setMessage(BATTLE_END_MESSAGE.removeEnemy.replace('NAME', this.enemy.getName()));
                     this.battlePhese = BATTLE_PHASE.end;
                     break;
                 case BATTLE_END_TYPE.escape:
@@ -793,9 +803,10 @@ class Battle {
             }
         };
         this.setMessage = (message) => {
+            console.log('set message');
+            console.log(message);
             if (this.message === undefined) {
-                this.message = message[0];
-                this.messageBuffer = message.slice(1);
+                this.message = message;
                 return;
             }
             this.messageBuffer = this.messageBuffer.concat(message);
@@ -868,6 +879,9 @@ class Battle {
         this.getBattleEnemyId = () => {
             return this.enemy.getId();
         };
+        this.getEnemy = () => {
+            return this.enemy;
+        };
         this.removeEnemy = () => {
             this.enemy.resetPlayerField();
             const index = gEnemys.findIndex((value) => {
@@ -883,7 +897,7 @@ class Battle {
         this.player = player;
         this.playerMoveTo = playerMoveTo;
         this.enemy = enemy;
-        this.setMessage(BATTLE_START_MESSAGE);
+        this.setMessage(BATTLE_START_MESSAGE.replace('NAME', this.enemy.getName()));
         this.getExp = this.enemy.getExp();
     }
 }
@@ -936,7 +950,7 @@ const updateView = (player) => {
     switch (gScene) {
         case SCENE.moveMap:
             moveEnemys();
-            if (gEnemys.length < 2) {
+            if (gEnemys.length < 3) {
                 popEnemy();
             }
             dispMoveMapScene(context, player);
