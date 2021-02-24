@@ -172,10 +172,13 @@ const ENEMY_IMAGE_PATH = {
     },
 };
 const PLAYER_IMAGE_PATH = {
-    up: '../image/playerUp.png',
-    down: '../image/playerDown.png',
-    right: '../image/playerRight.png',
-    left: '../image/playerLeft.png'
+    battle: '',
+    mini: {
+        up: '../image/playerUp.png',
+        down: '../image/playerDown.png',
+        right: '../image/playerRight.png',
+        left: '../image/playerLeft.png'
+    }
 };
 const ENEMY_A = {
     name: 'ラスボス',
@@ -385,7 +388,7 @@ const startBattle = (player, playerTo, enemyId) => {
     gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy);
 };
 class Charactor {
-    constructor(startPos, charactorId, name, size) {
+    constructor(startPos, charactorId, name, imgPath, size) {
         this.moveExecute = (pos) => {
             if (isMapOver(pos, this.size)) {
                 return RV_CANNOT_MOVE;
@@ -489,6 +492,22 @@ class Charactor {
         this.getName = () => {
             return this.name;
         };
+        this.getMiniImage = (angle) => {
+            const retAngle = angle ? angle : this.angle;
+            switch (retAngle) {
+                case 'up':
+                    return this.charactorImage.mini.up;
+                case 'down':
+                    return this.charactorImage.mini.down;
+                case 'left':
+                    return this.charactorImage.mini.left;
+                case 'right':
+                    return this.charactorImage.mini.right;
+            }
+        };
+        this.getBattleImage = () => {
+            return this.charactorImage.battle;
+        };
         this.pos = startPos;
         this.angle = 'down';
         this.charactorId = charactorId;
@@ -511,11 +530,41 @@ class Charactor {
                 gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
             }
         }
+        let images = {
+            battle: undefined,
+            mini: {
+                up: undefined,
+                down: undefined,
+                right: undefined,
+                left: undefined
+            }
+        };
+        if (imgPath.battle !== '') {
+            images.battle = new Image();
+            images.battle.src = imgPath.battle;
+        }
+        if (imgPath.mini.up !== '') {
+            images.mini.up = new Image();
+            images.mini.up.src = imgPath.mini.up;
+        }
+        if (imgPath.mini.down !== '') {
+            images.mini.down = new Image();
+            images.mini.down.src = imgPath.mini.down;
+        }
+        if (imgPath.mini.left !== '') {
+            images.mini.left = new Image();
+            images.mini.left.src = imgPath.mini.left;
+        }
+        if (imgPath.mini.right !== '') {
+            images.mini.right = new Image();
+            images.mini.right.src = imgPath.mini.right;
+        }
+        this.charactorImage = images;
     }
 }
 class Player extends Charactor {
     constructor(startPos, playerId, size) {
-        super(startPos, playerId, 'プレイヤー', size);
+        super(startPos, playerId, 'プレイヤー', PLAYER_IMAGE_PATH, size);
         this.playerName = 'プレイヤー';
         this.dispPlayerStatus = (context) => {
             context.fillStyle = COLOR.black;
@@ -606,7 +655,7 @@ class Player extends Charactor {
 }
 class Enemy extends Charactor {
     constructor(startPos, playerId, enemyType, size) {
-        super(startPos, playerId, getEnemyStatusFromType(enemyType).name, size ? size : getEnemyStatusFromType(enemyType).size);
+        super(startPos, playerId, getEnemyStatusFromType(enemyType).name, getEnemyStatusFromType(enemyType).imgPath, size ? size : getEnemyStatusFromType(enemyType).size);
         this.recieveDamage = (damage) => {
             this.hp -= damage;
             return this.hp > 0;
@@ -818,9 +867,10 @@ class Battle {
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
             context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
-            const img = new Image();
-            img.src = this.enemy.getImgPath().battle;
-            context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
+            const img = this.enemy.getBattleImage();
+            if (img !== undefined) {
+                context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
+            }
             switch (this.battlePhese) {
                 case BATTLE_PHASE.start:
                     this.dispBattleStartMessagePhase(context);
@@ -1020,9 +1070,9 @@ const dispBackground = (context) => {
 };
 const dispMoveMapScene = (context, player) => {
     dispField(context);
-    dispPlayer(context, player);
+    dispCharactor(context, player);
     gEnemys.map((value) => {
-        dispEnemy(context, value, COLOR.red);
+        dispCharactor(context, value);
     });
 };
 const dispField = (context) => {
@@ -1036,84 +1086,51 @@ const dispField = (context) => {
         }
     });
 };
-const dispPlayer = (context, player) => {
-    let img = new Image();
-    const pos = player.getPos();
-    const playerSize = player.getSize();
-    switch (player.getAngle()) {
-        case 'down':
-            img.src = PLAYER_IMAGE_PATH.down;
-            break;
-        case 'right':
-            img.src = PLAYER_IMAGE_PATH.right;
-            break;
-        case 'up':
-            img.src = PLAYER_IMAGE_PATH.up;
-            break;
-        case 'left':
-            img.src = PLAYER_IMAGE_PATH.left;
-            break;
-        default:
-            img.src = PLAYER_IMAGE_PATH.down;
-            break;
+const dispCharactor = (context, charactor) => {
+    const img = charactor.getMiniImage();
+    const pos = charactor.getPos();
+    const size = charactor.getSize();
+    if (img === undefined) {
+        const color = charactor instanceof Enemy ? COLOR.red : COLOR.blue;
+        drawDefaultCharactor(context, pos, charactor.getAngle(), color, size);
     }
-    context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * playerSize.width, NODE_SIZE.height * playerSize.height);
+    else {
+        context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * size.width, NODE_SIZE.height * size.height);
+    }
 };
-const dispEnemy = (context, enemy, color) => {
+const drawDefaultCharactor = (context, pos, angle, color, size) => {
     context.fillStyle = color;
     const defaultPath = {
-        x: enemy.getPos().x * NODE_SIZE.width,
-        y: enemy.getPos().y * NODE_SIZE.height
+        x: pos.x * NODE_SIZE.width,
+        y: pos.y * NODE_SIZE.height
     };
-    let img = new Image();
-    const enemySize = enemy.getSize();
-    switch (enemy.getAngle()) {
+    switch (angle) {
         case 'down':
-            if (enemy.getImgPath().mini.down !== '') {
-                img.src = enemy.getImgPath().mini.down;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.2), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.8), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.5), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
             context.fill();
             break;
         case 'right':
-            if (enemy.getImgPath().mini.right !== '') {
-                img.src = enemy.getImgPath().mini.right;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.8));
             context.fill();
             break;
         case 'up':
-            if (enemy.getImgPath().mini.up !== '') {
-                img.src = enemy.getImgPath().mini.up;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.2), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.5), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.8), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
             context.fill();
             break;
         case 'left':
-            if (enemy.getImgPath().mini.left !== '') {
-                img.src = enemy.getImgPath().mini.left;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.8));
             context.fill();
             break;
         default:
