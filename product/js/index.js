@@ -375,7 +375,7 @@ const checkCollision = (pos, size, myId) => {
     }
     return;
 };
-const startBattle = (player, playerTo, enemyId) => {
+const startBattle = (player, playerTo, enemyId, startByPlayer) => {
     gScene = SCENE.battle;
     const pos = getNextPos(player.getPos(), playerTo);
     const index = gEnemys.findIndex((value) => {
@@ -385,7 +385,7 @@ const startBattle = (player, playerTo, enemyId) => {
         return;
     }
     const enemy = gEnemys[index];
-    gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy);
+    gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy, startByPlayer);
 };
 class Charactor {
     constructor(startPos, charactorId, name, imgPath, size) {
@@ -398,10 +398,11 @@ class Charactor {
             }
             const collision = checkCollision(pos, this.size, this.charactorId);
             if (collision !== undefined) {
-                if (this.charactorId != PLAYER_ID) {
+                const collisionCharactorId = gPlayerField[getIndexFromPos(collision)];
+                if (this.charactorId !== PLAYER_ID && collisionCharactorId !== PLAYER_ID) {
                     return RV_CANNOT_MOVE;
                 }
-                return gPlayerField[getIndexFromPos(collision)];
+                return collisionCharactorId;
             }
             for (let xx = 0; xx < this.size.width; xx++) {
                 for (let yy = 0; yy < this.size.height; yy++) {
@@ -622,7 +623,7 @@ class Player extends Charactor {
                     return;
             }
             if (retval >= 0) {
-                startBattle(this, playerTo, retval);
+                startBattle(this, playerTo, retval, true);
             }
         };
         this.recieveDamage = (damage) => {
@@ -687,27 +688,31 @@ class Enemy extends Charactor {
     }
     randomMove() {
         if (!this.isMove) {
-            return;
+            return RV_CANNOT_MOVE;
         }
         const rand = getRandomInt(0, 4);
+        let retval;
         switch (rand) {
             case 0:
-                this.moveDown();
+                retval = this.moveDown();
                 break;
             case 1:
-                this.moveLeft();
+                retval = this.moveLeft();
                 break;
             case 2:
-                this.moveRight();
+                retval = this.moveRight();
                 break;
             case 3:
-                this.moveUp();
+                retval = this.moveUp();
                 break;
+            default:
+                return RV_CANNOT_MOVE;
         }
+        return retval;
     }
 }
 class Battle {
-    constructor(pos, battleCommand, player, playerMoveTo, enemy) {
+    constructor(pos, battleCommand, player, playerMoveTo, enemy, startByPlayer) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = BATTLE_PHASE.start;
         this.messageBuffer = [];
@@ -838,7 +843,9 @@ class Battle {
                         gScene = SCENE.moveMap;
                     }
                     this.removeEnemy();
-                    this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    if (this.startByPlayer) {
+                        this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    }
                     break;
                 case BATTLE_END_TYPE.escape:
                     gScene = SCENE.moveMap;
@@ -949,6 +956,7 @@ class Battle {
         this.enemy = enemy;
         this.setMessage(BATTLE_START_MESSAGE.replace('NAME', this.enemy.getName()));
         this.getExp = this.enemy.getExp();
+        this.startByPlayer = startByPlayer;
     }
 }
 const main = () => {
@@ -999,7 +1007,7 @@ const updateView = (player) => {
     player.dispPlayerStatus(context);
     switch (gScene) {
         case SCENE.moveMap:
-            moveEnemys();
+            moveEnemys(player);
             if (gEnemys.length < 3) {
                 popEnemy();
             }
@@ -1022,12 +1030,15 @@ const updateView = (player) => {
     context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
     context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 };
-const moveEnemys = () => {
+const moveEnemys = (player) => {
     if (gFrameCounter % 15 !== 0) {
         return;
     }
     gEnemys.map((value) => {
-        value.randomMove();
+        const retval = value.randomMove();
+        if (retval > 0) {
+            startBattle(player, player.getAngle(), value.getId(), false);
+        }
     });
 };
 const popEnemy = () => {
