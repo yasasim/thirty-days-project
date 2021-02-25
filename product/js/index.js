@@ -104,15 +104,16 @@ const BATTLE_TEXT_FIELD = {
         left: 0.5
     }
 };
-const BATTLE_START_MESSAGE = ['魔物があらわれた！！'];
+const BATTLE_START_MESSAGE = 'NAMEがあらわれた！！';
 const BATTLE_COMMAND_EXECUTE_MESSAGE = {
-    attack: ['プレイヤーの攻撃！！'],
-    escape: ['プレイヤーは逃げ出した！！'],
-    nothing: ['しかし何も起こらなかった！！']
+    attack: 'NAMEの攻撃！！',
+    escape: 'NAMEは逃げ出した！！',
+    nothing: 'しかし何も起こらなかった！！'
 };
+const BATTLE_RECIEVE_DAMAGE_MESSAGE = 'NAMEにDAMAGEのダメージ！！';
 const BATTLE_END_MESSAGE = {
-    removeEnemy: ['魔物をやっつけた！！'],
-    lose: ['プレイヤーは死んでしまった！！']
+    removeEnemy: 'NAMEをやっつけた！！',
+    lose: 'NAMEは死んでしまった！！'
 };
 const RV_CANNOT_MOVE = -2;
 const RV_MOVE_EXECUTE = -1;
@@ -171,12 +172,16 @@ const ENEMY_IMAGE_PATH = {
     },
 };
 const PLAYER_IMAGE_PATH = {
-    up: '../image/playerUp.png',
-    down: '../image/playerDown.png',
-    right: '../image/playerRight.png',
-    left: '../image/playerLeft.png'
+    battle: '',
+    mini: {
+        up: '../image/playerUp.png',
+        down: '../image/playerDown.png',
+        right: '../image/playerRight.png',
+        left: '../image/playerLeft.png'
+    }
 };
 const ENEMY_A = {
+    name: 'ラスボス',
     maxHp: 50,
     atack: 7,
     exp: 100,
@@ -189,6 +194,7 @@ const ENEMY_A = {
     }
 };
 const ENEMY_B = {
+    name: 'レアザコ',
     maxHp: 15,
     atack: 5,
     exp: 100,
@@ -201,6 +207,7 @@ const ENEMY_B = {
     }
 };
 const ENEMY_C = {
+    name: 'ザコ',
     maxHp: 10,
     atack: 3,
     exp: 15,
@@ -368,7 +375,7 @@ const checkCollision = (pos, size, myId) => {
     }
     return;
 };
-const startBattle = (player, playerTo, enemyId) => {
+const startBattle = (player, playerTo, enemyId, startByPlayer) => {
     gScene = SCENE.battle;
     const pos = getNextPos(player.getPos(), playerTo);
     const index = gEnemys.findIndex((value) => {
@@ -378,10 +385,10 @@ const startBattle = (player, playerTo, enemyId) => {
         return;
     }
     const enemy = gEnemys[index];
-    gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy);
+    gBattle = new Battle(pos, gUsableBattleCommand, player, playerTo, enemy, startByPlayer);
 };
 class Charactor {
-    constructor(startPos, charactorId, size) {
+    constructor(startPos, charactorId, name, imgPath, size) {
         this.moveExecute = (pos) => {
             if (isMapOver(pos, this.size)) {
                 return RV_CANNOT_MOVE;
@@ -391,10 +398,11 @@ class Charactor {
             }
             const collision = checkCollision(pos, this.size, this.charactorId);
             if (collision !== undefined) {
-                if (this.charactorId != PLAYER_ID) {
+                const collisionCharactorId = gPlayerField[getIndexFromPos(collision)];
+                if (this.charactorId !== PLAYER_ID && collisionCharactorId !== PLAYER_ID) {
                     return RV_CANNOT_MOVE;
                 }
-                return gPlayerField[getIndexFromPos(collision)];
+                return collisionCharactorId;
             }
             for (let xx = 0; xx < this.size.width; xx++) {
                 for (let yy = 0; yy < this.size.height; yy++) {
@@ -482,9 +490,29 @@ class Charactor {
         this.getSize = () => {
             return this.size;
         };
+        this.getName = () => {
+            return this.name;
+        };
+        this.getMiniImage = (angle) => {
+            const retAngle = angle ? angle : this.angle;
+            switch (retAngle) {
+                case 'up':
+                    return this.charactorImage.mini.up;
+                case 'down':
+                    return this.charactorImage.mini.down;
+                case 'left':
+                    return this.charactorImage.mini.left;
+                case 'right':
+                    return this.charactorImage.mini.right;
+            }
+        };
+        this.getBattleImage = () => {
+            return this.charactorImage.battle;
+        };
         this.pos = startPos;
         this.angle = 'down';
         this.charactorId = charactorId;
+        this.name = name;
         if (size) {
             this.size = size;
         }
@@ -503,11 +531,41 @@ class Charactor {
                 gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
             }
         }
+        let images = {
+            battle: undefined,
+            mini: {
+                up: undefined,
+                down: undefined,
+                right: undefined,
+                left: undefined
+            }
+        };
+        if (imgPath.battle !== '') {
+            images.battle = new Image();
+            images.battle.src = imgPath.battle;
+        }
+        if (imgPath.mini.up !== '') {
+            images.mini.up = new Image();
+            images.mini.up.src = imgPath.mini.up;
+        }
+        if (imgPath.mini.down !== '') {
+            images.mini.down = new Image();
+            images.mini.down.src = imgPath.mini.down;
+        }
+        if (imgPath.mini.left !== '') {
+            images.mini.left = new Image();
+            images.mini.left.src = imgPath.mini.left;
+        }
+        if (imgPath.mini.right !== '') {
+            images.mini.right = new Image();
+            images.mini.right.src = imgPath.mini.right;
+        }
+        this.charactorImage = images;
     }
 }
 class Player extends Charactor {
     constructor(startPos, playerId, size) {
-        super(startPos, playerId, size);
+        super(startPos, playerId, 'プレイヤー', PLAYER_IMAGE_PATH, size);
         this.playerName = 'プレイヤー';
         this.dispPlayerStatus = (context) => {
             context.fillStyle = COLOR.black;
@@ -565,7 +623,7 @@ class Player extends Charactor {
                     return;
             }
             if (retval >= 0) {
-                startBattle(this, playerTo, retval);
+                startBattle(this, playerTo, retval, true);
             }
         };
         this.recieveDamage = (damage) => {
@@ -598,7 +656,7 @@ class Player extends Charactor {
 }
 class Enemy extends Charactor {
     constructor(startPos, playerId, enemyType, size) {
-        super(startPos, playerId, size ? size : getEnemyStatusFromType(enemyType).size);
+        super(startPos, playerId, getEnemyStatusFromType(enemyType).name, getEnemyStatusFromType(enemyType).imgPath, size ? size : getEnemyStatusFromType(enemyType).size);
         this.recieveDamage = (damage) => {
             this.hp -= damage;
             return this.hp > 0;
@@ -630,27 +688,31 @@ class Enemy extends Charactor {
     }
     randomMove() {
         if (!this.isMove) {
-            return;
+            return RV_CANNOT_MOVE;
         }
         const rand = getRandomInt(0, 4);
+        let retval;
         switch (rand) {
             case 0:
-                this.moveDown();
+                retval = this.moveDown();
                 break;
             case 1:
-                this.moveLeft();
+                retval = this.moveLeft();
                 break;
             case 2:
-                this.moveRight();
+                retval = this.moveRight();
                 break;
             case 3:
-                this.moveUp();
+                retval = this.moveUp();
                 break;
+            default:
+                return RV_CANNOT_MOVE;
         }
+        return retval;
     }
 }
 class Battle {
-    constructor(pos, battleCommand, player, playerMoveTo, enemy) {
+    constructor(pos, battleCommand, player, playerMoveTo, enemy, startByPlayer) {
         this.battleCommandCursorPos = 0;
         this.battlePhese = BATTLE_PHASE.start;
         this.messageBuffer = [];
@@ -702,16 +764,16 @@ class Battle {
             let flgTmp;
             switch (this.battleCommandCursorPos) {
                 case 0:
-                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.player.getName()));
                     flgTmp = this.enemy.recieveDamage(this.player.getAtack());
-                    this.setMessage([`魔物に${this.player.getAtack()}のダメージ！！`]);
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.enemy.getName()).replace('DAMAGE', this.player.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.win;
                         break;
                     }
-                    this.setMessage([`魔物の攻撃！！`]);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.enemy.getName()));
                     flgTmp = this.player.recieveDamage(this.enemy.getAtack());
-                    this.setMessage([`プレイヤーに${this.enemy.getAtack()}のダメージ！！`]);
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.player.getName()).replace('DAMAGE', this.enemy.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
@@ -723,7 +785,9 @@ class Battle {
                     break;
                 case 2:
                     this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.nothing);
+                    this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.attack.replace('NAME', this.enemy.getName()));
                     flgTmp = this.player.recieveDamage(this.enemy.getAtack());
+                    this.setMessage(BATTLE_RECIEVE_DAMAGE_MESSAGE.replace('NAME', this.player.getName()).replace('DAMAGE', this.enemy.getAtack().toString()));
                     if (!flgTmp) {
                         this.battleEndType = BATTLE_END_TYPE.lose;
                         break;
@@ -738,7 +802,7 @@ class Battle {
             }
             switch (this.battleEndType) {
                 case BATTLE_END_TYPE.win:
-                    this.setMessage(BATTLE_END_MESSAGE.removeEnemy);
+                    this.setMessage(BATTLE_END_MESSAGE.removeEnemy.replace('NAME', this.enemy.getName()));
                     this.battlePhese = BATTLE_PHASE.end;
                     break;
                 case BATTLE_END_TYPE.escape:
@@ -779,7 +843,9 @@ class Battle {
                         gScene = SCENE.moveMap;
                     }
                     this.removeEnemy();
-                    this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    if (this.startByPlayer) {
+                        this.player.moveToPos(this.battlePos, this.playerMoveTo);
+                    }
                     break;
                 case BATTLE_END_TYPE.escape:
                     gScene = SCENE.moveMap;
@@ -793,9 +859,10 @@ class Battle {
             }
         };
         this.setMessage = (message) => {
+            console.log('set message');
+            console.log(message);
             if (this.message === undefined) {
-                this.message = message[0];
-                this.messageBuffer = message.slice(1);
+                this.message = message;
                 return;
             }
             this.messageBuffer = this.messageBuffer.concat(message);
@@ -807,9 +874,10 @@ class Battle {
         this.dispBattleScene = (context) => {
             context.fillStyle = COLOR.black;
             context.fillRect(0, 0, NODE_SIZE.width * FIELD_SIZE.x, NODE_SIZE.height * FIELD_SIZE.y);
-            const img = new Image();
-            img.src = this.enemy.getImgPath().battle;
-            context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
+            const img = this.enemy.getBattleImage();
+            if (img !== undefined) {
+                context.drawImage(img, NODE_SIZE.width * (FIELD_SIZE.x / 2 - 5), NODE_SIZE.height * (FIELD_SIZE.y / 2 - 5), NODE_SIZE.width * 10, NODE_SIZE.height * 10);
+            }
             switch (this.battlePhese) {
                 case BATTLE_PHASE.start:
                     this.dispBattleStartMessagePhase(context);
@@ -868,6 +936,9 @@ class Battle {
         this.getBattleEnemyId = () => {
             return this.enemy.getId();
         };
+        this.getEnemy = () => {
+            return this.enemy;
+        };
         this.removeEnemy = () => {
             this.enemy.resetPlayerField();
             const index = gEnemys.findIndex((value) => {
@@ -883,8 +954,9 @@ class Battle {
         this.player = player;
         this.playerMoveTo = playerMoveTo;
         this.enemy = enemy;
-        this.setMessage(BATTLE_START_MESSAGE);
+        this.setMessage(BATTLE_START_MESSAGE.replace('NAME', this.enemy.getName()));
         this.getExp = this.enemy.getExp();
+        this.startByPlayer = startByPlayer;
     }
 }
 const main = () => {
@@ -935,8 +1007,8 @@ const updateView = (player) => {
     player.dispPlayerStatus(context);
     switch (gScene) {
         case SCENE.moveMap:
-            moveEnemys();
-            if (gEnemys.length < 2) {
+            moveEnemys(player);
+            if (gEnemys.length < 3) {
                 popEnemy();
             }
             dispMoveMapScene(context, player);
@@ -958,12 +1030,15 @@ const updateView = (player) => {
     context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
     context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 };
-const moveEnemys = () => {
+const moveEnemys = (player) => {
     if (gFrameCounter % 15 !== 0) {
         return;
     }
     gEnemys.map((value) => {
-        value.randomMove();
+        const retval = value.randomMove();
+        if (retval > 0) {
+            startBattle(player, player.getAngle(), value.getId(), false);
+        }
     });
 };
 const popEnemy = () => {
@@ -1006,9 +1081,9 @@ const dispBackground = (context) => {
 };
 const dispMoveMapScene = (context, player) => {
     dispField(context);
-    dispPlayer(context, player);
+    dispCharactor(context, player);
     gEnemys.map((value) => {
-        dispEnemy(context, value, COLOR.red);
+        dispCharactor(context, value);
     });
 };
 const dispField = (context) => {
@@ -1022,84 +1097,51 @@ const dispField = (context) => {
         }
     });
 };
-const dispPlayer = (context, player) => {
-    let img = new Image();
-    const pos = player.getPos();
-    const playerSize = player.getSize();
-    switch (player.getAngle()) {
-        case 'down':
-            img.src = PLAYER_IMAGE_PATH.down;
-            break;
-        case 'right':
-            img.src = PLAYER_IMAGE_PATH.right;
-            break;
-        case 'up':
-            img.src = PLAYER_IMAGE_PATH.up;
-            break;
-        case 'left':
-            img.src = PLAYER_IMAGE_PATH.left;
-            break;
-        default:
-            img.src = PLAYER_IMAGE_PATH.down;
-            break;
+const dispCharactor = (context, charactor) => {
+    const img = charactor.getMiniImage();
+    const pos = charactor.getPos();
+    const size = charactor.getSize();
+    if (img === undefined) {
+        const color = charactor instanceof Enemy ? COLOR.red : COLOR.blue;
+        drawDefaultCharactor(context, pos, charactor.getAngle(), color, size);
     }
-    context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * playerSize.width, NODE_SIZE.height * playerSize.height);
+    else {
+        context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * size.width, NODE_SIZE.height * size.height);
+    }
 };
-const dispEnemy = (context, enemy, color) => {
+const drawDefaultCharactor = (context, pos, angle, color, size) => {
     context.fillStyle = color;
     const defaultPath = {
-        x: enemy.getPos().x * NODE_SIZE.width,
-        y: enemy.getPos().y * NODE_SIZE.height
+        x: pos.x * NODE_SIZE.width,
+        y: pos.y * NODE_SIZE.height
     };
-    let img = new Image();
-    const enemySize = enemy.getSize();
-    switch (enemy.getAngle()) {
+    switch (angle) {
         case 'down':
-            if (enemy.getImgPath().mini.down !== '') {
-                img.src = enemy.getImgPath().mini.down;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.2), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.8), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.5), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
             context.fill();
             break;
         case 'right':
-            if (enemy.getImgPath().mini.right !== '') {
-                img.src = enemy.getImgPath().mini.right;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.8));
             context.fill();
             break;
         case 'up':
-            if (enemy.getImgPath().mini.up !== '') {
-                img.src = enemy.getImgPath().mini.up;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.2), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.5), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.1));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.8), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.9));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.2), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.5), defaultPath.y + (NODE_SIZE.height * size.height * 0.1));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.8), defaultPath.y + (NODE_SIZE.height * size.height * 0.9));
             context.fill();
             break;
         case 'left':
-            if (enemy.getImgPath().mini.left !== '') {
-                img.src = enemy.getImgPath().mini.left;
-                context.drawImage(img, defaultPath.x, defaultPath.y, NODE_SIZE.width * enemySize.width, NODE_SIZE.height * enemySize.height);
-                break;
-            }
             context.beginPath();
-            context.moveTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.2));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.1), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.5));
-            context.lineTo(defaultPath.x + (NODE_SIZE.width * enemySize.width * 0.9), defaultPath.y + (NODE_SIZE.height * enemySize.height * 0.8));
+            context.moveTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.2));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.1), defaultPath.y + (NODE_SIZE.height * size.height * 0.5));
+            context.lineTo(defaultPath.x + (NODE_SIZE.width * size.width * 0.9), defaultPath.y + (NODE_SIZE.height * size.height * 0.8));
             context.fill();
             break;
         default:
