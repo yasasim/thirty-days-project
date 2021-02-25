@@ -257,6 +257,10 @@ const PLAYER_IMAGE_PATH: CharactorImagePath = {
   }
 }
 
+const AUDIO_PATH = {
+  field: '../audio/field.mp3'
+}
+
 const ENEMY_A = {
   name: 'ラスボス',
   maxHp: 50,
@@ -332,11 +336,13 @@ const gUsableBattleCommand = [
   'ああああ'
 ]
 
-const gEnemys: Enemy[] = [] ;
+const gEnemys: Enemy[] = [];
 
 let gBattle: Battle | null = null;
 
 let gEnemyId: number = 2;
+
+let gBgm = new Audio();
 
 const gMap = [
   0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -472,6 +478,10 @@ const checkCollision = (pos: Position, size: Size, myId: number): Position | und
 
 const startBattle = (player: Player, playerTo: Angle, enemyId: number, startByPlayer: boolean) => {
   gScene = SCENE.battle;
+  if(!gBgm.paused){
+    gBgm.pause();
+    gBgm.currentTime = 0;
+  }
   const pos = getNextPos(player.getPos(), playerTo)
   const index = gEnemys.findIndex((value) => {
     return value.getId() === enemyId
@@ -1025,6 +1035,9 @@ class Battle {
           gScene = SCENE.gameClear;
         }else{
           gScene = SCENE.moveMap;
+          if(gBgm.paused){
+            gBgm.play();
+          }
         }
         this.removeEnemy();
         if(this.startByPlayer){
@@ -1198,9 +1211,14 @@ const main = () => {
   gEnemys.push(new Enemy({x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2}, gEnemyId++, 'c'));
   gEnemys.push(new Enemy(ENEMY_A_POSITION, gEnemyId++, 'a'));
 
+  gBgm.src = AUDIO_PATH.field;
+
   window.addEventListener('keydown', (event: KeyboardEvent) => {
     switch (gScene) {
       case SCENE.moveMap:
+        if(gBgm.paused){
+          gBgm.play();
+        }
         player.playerMoveEvent(event);
         break;
       case SCENE.battle:
@@ -1240,6 +1258,11 @@ const updateView = (player: Player): void => {
 
   switch(gScene) {
     case SCENE.moveMap:
+      console.log(gBgm.currentTime);
+      if(gBgm.currentTime > 54.05){
+        gBgm.currentTime = 7.85;
+        gBgm.play();
+      }
       moveEnemys(player);
       if(gEnemys.length < 3){
         popEnemy();
