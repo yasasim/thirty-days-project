@@ -318,6 +318,10 @@ const ENEMY_STATUS_TABLE = [{
 },
 ]
 
+const EVENT_ID = {
+  cure: 1
+}
+
 let gPressString: string = '';
 
 let gFrameCounter: number = 0;
@@ -409,7 +413,7 @@ const gPlayerField = [
 ]
 
 const gEventField = [
-  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EVENT_ID.cure, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
@@ -490,10 +494,6 @@ const canWalkInto = (pos: Position, size: Size): boolean => {
   return true;
 }
 
-const checkEvent = (pos: Position, size: Size): boolean => {
-  return false;
-}
-
 const checkCollision = (pos: Position, size: Size, myId: number): Position | undefined => {
   for(let xx = 0; xx < size.width; xx++){
     for(let yy = 0; yy < size.height; yy++){
@@ -508,6 +508,33 @@ const checkCollision = (pos: Position, size: Size, myId: number): Position | und
   }
   return;
 }
+
+const checkEvent = (pos: Position, size: Size): number => {
+  for(let xx = 0; xx < size.width; xx++){
+    for(let yy = 0; yy < size.height; yy++){
+      const checkPos: Position = {
+        x: pos.x + xx,
+        y: pos.y + yy
+      }
+      if(gEventField[getIndexFromPos(checkPos)] !== EMPTY){
+        console.log('checkEvent');
+        console.log(gEventField[getIndexFromPos(checkPos)]);
+        return gEventField[getIndexFromPos(checkPos)];
+      }
+    }
+  }
+  console.log('checkEvent');
+  console.log(EMPTY);
+  return EMPTY;
+}
+
+const executeEvent = (eventId: number, player: Player) => {
+  switch(eventId){
+    case EVENT_ID.cure:
+      player.cureAll();
+      break;
+  }
+} 
 
 const startBattle = (player: Player, playerTo: Angle, enemyId: number, startByPlayer: boolean) => {
   gScene = SCENE.battle;
@@ -599,14 +626,16 @@ class Charactor {
       }
       return collisionCharactorId;
     }
+    if ( this instanceof Player){
+      executeEvent(checkEvent(pos, this.size), this);
+    }
+
     for(let xx = 0; xx < this.size.width; xx++){
       for(let yy = 0; yy < this.size.height; yy++){
         const resetPos: Position = {
           x: this.pos.x + xx,
           y: this.pos.y + yy
         }
-        console.log('reset');
-        console.log(resetPos);
         gPlayerField[getIndexFromPos(resetPos)] = EMPTY;
       }
     }
@@ -617,8 +646,6 @@ class Charactor {
           x: this.pos.x + xx,
           y: this.pos.y + yy
         }
-        console.log('set');
-        console.log(setPos);
         gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
       }
     }
@@ -832,6 +859,10 @@ class Player extends Charactor {
 
   getLv = (): number => {
     return this.lv
+  }
+
+  cureAll = () => {
+    this.hp = this.maxHp;
   }
 }
 
