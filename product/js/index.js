@@ -13,7 +13,9 @@ const COLOR = {
     white: 'rgb(255,255,255)',
     black: 'rgb(00,00,00)',
     gray: 'rgb(128,128,128)',
-    sand: 'rgb(246, 215, 176)'
+    sand: 'rgb(246, 215, 176)',
+    lightBlack: 'rgba(00,00,00,0.5)',
+    clear: 'rgba(0, 0, 0, 0)'
 };
 const FIELD_GRASS = {
     color: COLOR.lightGreen,
@@ -114,6 +116,9 @@ const BATTLE_RECIEVE_DAMAGE_MESSAGE = 'NAMEにDAMAGEのダメージ！！';
 const BATTLE_END_MESSAGE = {
     removeEnemy: 'NAMEをやっつけた！！',
     lose: 'NAMEは死んでしまった！！'
+};
+const FIELD_EVENT_MESSAGE = {
+    cure: 'NAMEのHPが回復した！！'
 };
 const RV_CANNOT_MOVE = -2;
 const RV_MOVE_EXECUTE = -1;
@@ -251,8 +256,10 @@ const gUsableBattleCommand = [
 const gEnemys = [];
 let gBattle = null;
 let gEnemyId = 2;
+let gFieldMessage;
+let gFieldMessageBuffer = [];
 const gMap = [
-    0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+    1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -420,20 +427,17 @@ const checkEvent = (pos, size) => {
                 y: pos.y + yy
             };
             if (gEventField[getIndexFromPos(checkPos)] !== EMPTY) {
-                console.log('checkEvent');
-                console.log(gEventField[getIndexFromPos(checkPos)]);
                 return gEventField[getIndexFromPos(checkPos)];
             }
         }
     }
-    console.log('checkEvent');
-    console.log(EMPTY);
     return EMPTY;
 };
 const executeEvent = (eventId, player) => {
     switch (eventId) {
         case EVENT_ID.cure:
             player.cureAll();
+            setFieldMessage(FIELD_EVENT_MESSAGE.cure.replace('NAME', player.getName()));
             break;
     }
 };
@@ -796,8 +800,6 @@ class Battle {
                     this.readBattleEndMessage(event);
                     break;
             }
-            console.log(this.message);
-            console.log(this.messageBuffer);
         };
         this.readBattleStartMessage = (event) => {
             const messageEnd = this.readMessage();
@@ -1040,6 +1042,10 @@ const main = () => {
     window.addEventListener('keydown', (event) => {
         switch (gScene) {
             case SCENE.moveMap:
+                if (gFieldMessage) {
+                    readFieldMessageEvent(event);
+                    break;
+                }
                 player.playerMoveEvent(event);
                 break;
             case SCENE.battle:
@@ -1076,6 +1082,10 @@ const updateView = (player) => {
                 popEnemy();
             }
             dispMoveMapScene(context, player);
+            if (gFieldMessage) {
+                dispFieldMessageField(context);
+                dispFieldMessage(context);
+            }
             break;
         case SCENE.battle:
             if (!gBattle) {
@@ -1210,6 +1220,41 @@ const drawDefaultCharactor = (context, pos, angle, color, size) => {
         default:
             break;
     }
+};
+const dispFieldMessage = (context) => {
+    if (!gFieldMessage) {
+        return;
+    }
+    context.fillStyle = COLOR.white;
+    context.fillText(gFieldMessage, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1));
+};
+const dispFieldMessageField = (context) => {
+    context.strokeStyle = COLOR.clear;
+    context.lineWidth = 0;
+    roundedRect(context, NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left - 0.1), NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom - 0.1), NODE_SIZE.width * (BATTLE_TEXT_FIELD.messageField.width + 0.2), NODE_SIZE.height * (BATTLE_TEXT_FIELD.messageField.height + 0.2), NODE_SIZE.height / 2);
+    context.fillStyle = COLOR.lightBlack;
+    context.fill();
+    context.strokeStyle = COLOR.white;
+    context.lineWidth = 2;
+    roundedRect(context, NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left, NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom), NODE_SIZE.width * BATTLE_TEXT_FIELD.messageField.width, NODE_SIZE.height * BATTLE_TEXT_FIELD.messageField.height, NODE_SIZE.height / 2);
+};
+const setFieldMessage = (message) => {
+    if (gFieldMessage === undefined) {
+        gFieldMessage = message;
+        return;
+    }
+    gFieldMessageBuffer = gFieldMessageBuffer.concat(message);
+};
+const readFieldMessageEvent = (event) => {
+    switch (event.key) {
+        case 'Enter':
+            readFieldMessage();
+            break;
+    }
+};
+const readFieldMessage = () => {
+    gFieldMessage = gFieldMessageBuffer.shift();
+    return gFieldMessage === undefined;
 };
 const dispGameClearScene = (context) => {
     context.fillStyle = COLOR.black;
