@@ -272,7 +272,7 @@ const ENEMY_A = {
 }
 
 const ENEMY_B = {
-  name: 'レアザコ',
+  name: 'ベチョマンテ',
   maxHp: 15,
   atack: 5,
   exp: 100,
@@ -286,7 +286,7 @@ const ENEMY_B = {
 }
 
 const ENEMY_C = {
-  name: 'ザコ',
+  name: 'ベチョマ',
   maxHp: 10,
   atack: 3,
   exp: 15,
@@ -971,7 +971,7 @@ class Battle {
         }
         break;
       case 1:
-        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape);
+        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape.replace('NAME', this.player.getName()));
         this.battleEndType = BATTLE_END_TYPE.escape;
         break;
       case 2:
@@ -1001,7 +1001,7 @@ class Battle {
         this.battleEndEvent();
         break;
       case BATTLE_END_TYPE.lose:
-        this.setMessage(BATTLE_END_MESSAGE.lose)
+        this.setMessage(BATTLE_END_MESSAGE.lose.replace('NAME', this.player.getName()));
         this.battlePhese = BATTLE_PHASE.end;
         break;
       case BATTLE_END_TYPE.false:
@@ -1054,8 +1054,6 @@ class Battle {
   }
 
   private setMessage = (message: string) => {
-    console.log('set message');
-    console.log(message);
     if(this.message === undefined){
       this.message = message;
       return;
