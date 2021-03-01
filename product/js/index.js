@@ -185,6 +185,9 @@ const PLAYER_IMAGE_PATH = {
         left: '../image/playerLeft.png'
     }
 };
+const AUDIO_PATH = {
+    field: '../audio/field.mp3'
+};
 const ENEMY_A = {
     name: 'ラスボス',
     maxHp: 50,
@@ -259,6 +262,7 @@ const gUsableBattleCommand = [
 const gEnemys = [];
 let gBattle = null;
 let gEnemyId = 2;
+let gBgm = new Audio();
 let gFieldMessage;
 let gFieldMessageBuffer = [];
 let gBattleIgnoreFrame = 0;
@@ -450,6 +454,10 @@ const startBattle = (player, playerTo, enemyId, startByPlayer) => {
         return;
     }
     gScene = SCENE.battle;
+    if (!gBgm.paused) {
+        gBgm.pause();
+        gBgm.currentTime = 0;
+    }
     const pos = getNextPos(player.getPos(), playerTo);
     const index = gEnemys.findIndex((value) => {
         return value.getId() === enemyId;
@@ -914,6 +922,9 @@ class Battle {
                     }
                     else {
                         gScene = SCENE.moveMap;
+                        if (gBgm.paused) {
+                            gBgm.play();
+                        }
                     }
                     this.removeEnemy();
                     if (this.startByPlayer) {
@@ -922,6 +933,9 @@ class Battle {
                     break;
                 case BATTLE_END_TYPE.escape:
                     gBattleIgnoreFrame = gFrameCounter + TIME.battleIgnore;
+                    if (gBgm.paused) {
+                        gBgm.play();
+                    }
                     gScene = SCENE.moveMap;
                     break;
                 case BATTLE_END_TYPE.lose:
@@ -1045,9 +1059,13 @@ const main = () => {
     gEnemys.push(new Enemy({ x: FIELD_SIZE.x - 2, y: FIELD_SIZE.y - 1 }, gEnemyId++, 'c'));
     gEnemys.push(new Enemy({ x: FIELD_SIZE.x - 1, y: FIELD_SIZE.y - 2 }, gEnemyId++, 'c'));
     gEnemys.push(new Enemy(ENEMY_A_POSITION, gEnemyId++, 'a'));
+    gBgm.src = AUDIO_PATH.field;
     window.addEventListener('keydown', (event) => {
         switch (gScene) {
             case SCENE.moveMap:
+                if (gBgm.paused) {
+                    gBgm.play();
+                }
                 if (gFieldMessage) {
                     readFieldMessageEvent(event);
                     break;
@@ -1083,6 +1101,11 @@ const updateView = (player) => {
     player.dispPlayerStatus(context);
     switch (gScene) {
         case SCENE.moveMap:
+            console.log(gBgm.currentTime);
+            if (gBgm.currentTime > 54.05) {
+                gBgm.currentTime = 7.85;
+                gBgm.play();
+            }
             moveEnemys(player);
             if (gEnemys.length < 3) {
                 popEnemy();
