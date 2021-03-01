@@ -236,6 +236,9 @@ const ENEMY_STATUS_TABLE = [{
         status: ENEMY_C,
     },
 ];
+const TIME = {
+    battleIgnore: 90
+};
 let gPressString = '';
 let gFrameCounter = 0;
 let gScene = SCENE.moveMap;
@@ -248,6 +251,7 @@ const gUsableBattleCommand = [
 const gEnemys = [];
 let gBattle = null;
 let gEnemyId = 2;
+let gBattleIgnoreFrame = 0;
 const gMap = [
     0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
     0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -376,6 +380,9 @@ const checkCollision = (pos, size, myId) => {
     return;
 };
 const startBattle = (player, playerTo, enemyId, startByPlayer) => {
+    if (gBattleIgnoreFrame > gFrameCounter) {
+        return;
+    }
     gScene = SCENE.battle;
     const pos = getNextPos(player.getPos(), playerTo);
     const index = gEnemys.findIndex((value) => {
@@ -848,6 +855,7 @@ class Battle {
                     }
                     break;
                 case BATTLE_END_TYPE.escape:
+                    gBattleIgnoreFrame = gFrameCounter + TIME.battleIgnore;
                     gScene = SCENE.moveMap;
                     break;
                 case BATTLE_END_TYPE.lose:
@@ -1105,7 +1113,9 @@ const dispCharactor = (context, charactor) => {
         drawDefaultCharactor(context, pos, charactor.getAngle(), color, size);
     }
     else {
+        context.globalAlpha = charactor instanceof Player && gBattleIgnoreFrame > gFrameCounter ? 0.5 : 1;
         context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * size.width, NODE_SIZE.height * size.height);
+        //    context.globalAlpha = 1;
     }
 };
 const drawDefaultCharactor = (context, pos, angle, color, size) => {
