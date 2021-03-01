@@ -62,7 +62,9 @@ const COLOR = {
   white: 'rgb(255,255,255)',
   black: 'rgb(00,00,00)',
   gray: 'rgb(128,128,128)',
-  sand: 'rgb(246, 215, 176)'
+  sand: 'rgb(246, 215, 176)',
+  lightBlack: 'rgba(00,00,00,0.5)',
+  clear: 'rgba(0, 0, 0, 0)'
 }
 
 const FIELD_GRASS: FieldStatus = {
@@ -186,6 +188,10 @@ const BATTLE_END_MESSAGE = {
   lose: 'NAMEは死んでしまった！！'
 }
 
+const FIELD_EVENT_MESSAGE = {
+  cure: 'NAMEのHPが回復した！！'
+}
+
 const RV_CANNOT_MOVE = -2;
 const RV_MOVE_EXECUTE = -1;
 
@@ -276,7 +282,7 @@ const ENEMY_A = {
 }
 
 const ENEMY_B = {
-  name: 'レアザコ',
+  name: 'ベチョマンテ',
   maxHp: 15,
   atack: 5,
   exp: 100,
@@ -290,7 +296,7 @@ const ENEMY_B = {
 }
 
 const ENEMY_C = {
-  name: 'ザコ',
+  name: 'ベチョマ',
   maxHp: 10,
   atack: 3,
   exp: 15,
@@ -322,6 +328,14 @@ const ENEMY_STATUS_TABLE = [{
 },
 ]
 
+const EVENT_ID = {
+  cure: 1
+}
+
+const TIME = {
+  battleIgnore: 90
+}
+
 let gPressString: string = '';
 
 let gFrameCounter: number = 0;
@@ -344,8 +358,14 @@ let gEnemyId: number = 2;
 
 let gBgm = new Audio();
 
+let gFieldMessage: string | undefined;
+
+let gFieldMessageBuffer: string[] = [];
+
+let gBattleIgnoreFrame: number = 0;
+
 const gMap = [
-  0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
+  1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
   0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -381,6 +401,41 @@ const gMap = [
 
 const gPlayerField = [
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+  EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+]
+
+const gEventField = [
+  EVENT_ID.cure, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
   EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
@@ -476,13 +531,40 @@ const checkCollision = (pos: Position, size: Size, myId: number): Position | und
   return;
 }
 
+const checkEvent = (pos: Position, size: Size): number => {
+  for(let xx = 0; xx < size.width; xx++){
+    for(let yy = 0; yy < size.height; yy++){
+      const checkPos: Position = {
+        x: pos.x + xx,
+        y: pos.y + yy
+      }
+      if(gEventField[getIndexFromPos(checkPos)] !== EMPTY){
+        return gEventField[getIndexFromPos(checkPos)];
+      }
+    }
+  }
+  return EMPTY;
+}
+
+const executeEvent = (eventId: number, player: Player) => {
+  switch(eventId){
+    case EVENT_ID.cure:
+      player.cureAll();
+      setFieldMessage(FIELD_EVENT_MESSAGE.cure.replace('NAME', player.getName()));
+      break;
+  }
+} 
+
 const startBattle = (player: Player, playerTo: Angle, enemyId: number, startByPlayer: boolean) => {
+  if(gBattleIgnoreFrame > gFrameCounter){
+    return;
+  }
   gScene = SCENE.battle;
   if(!gBgm.paused){
     gBgm.pause();
     gBgm.currentTime = 0;
   }
-  const pos = getNextPos(player.getPos(), playerTo)
+  const pos = getNextPos(player.getPos(), playerTo);
   const index = gEnemys.findIndex((value) => {
     return value.getId() === enemyId
   });
@@ -570,14 +652,16 @@ class Charactor {
       }
       return collisionCharactorId;
     }
+    if ( this instanceof Player){
+      executeEvent(checkEvent(pos, this.size), this);
+    }
+
     for(let xx = 0; xx < this.size.width; xx++){
       for(let yy = 0; yy < this.size.height; yy++){
         const resetPos: Position = {
           x: this.pos.x + xx,
           y: this.pos.y + yy
         }
-        console.log('reset');
-        console.log(resetPos);
         gPlayerField[getIndexFromPos(resetPos)] = EMPTY;
       }
     }
@@ -588,8 +672,6 @@ class Charactor {
           x: this.pos.x + xx,
           y: this.pos.y + yy
         }
-        console.log('set');
-        console.log(setPos);
         gPlayerField[getIndexFromPos(setPos)] = this.charactorId;
       }
     }
@@ -804,6 +886,10 @@ class Player extends Charactor {
   getLv = (): number => {
     return this.lv
   }
+
+  cureAll = () => {
+    this.hp = this.maxHp;
+  }
 }
 
 class Enemy extends Charactor {
@@ -921,8 +1007,6 @@ class Battle {
         this.readBattleEndMessage(event);
         break;
     }
-    console.log(this.message);
-    console.log(this.messageBuffer);
   }
 
   private readBattleStartMessage = (event: KeyboardEvent) => {
@@ -972,7 +1056,7 @@ class Battle {
         }
         break;
       case 1:
-        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape);
+        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape.replace('NAME', this.player.getName()));
         this.battleEndType = BATTLE_END_TYPE.escape;
         break;
       case 2:
@@ -1002,7 +1086,7 @@ class Battle {
         this.battleEndEvent();
         break;
       case BATTLE_END_TYPE.lose:
-        this.setMessage(BATTLE_END_MESSAGE.lose)
+        this.setMessage(BATTLE_END_MESSAGE.lose.replace('NAME', this.player.getName()));
         this.battlePhese = BATTLE_PHASE.end;
         break;
       case BATTLE_END_TYPE.false:
@@ -1045,6 +1129,10 @@ class Battle {
         }
         break;
       case BATTLE_END_TYPE.escape:
+        gBattleIgnoreFrame = gFrameCounter + TIME.battleIgnore;
+        if(gBgm.paused){
+          gBgm.play();
+        }
         gScene = SCENE.moveMap;
         break;
       case BATTLE_END_TYPE.lose:
@@ -1057,8 +1145,6 @@ class Battle {
   }
 
   private setMessage = (message: string) => {
-    console.log('set message');
-    console.log(message);
     if(this.message === undefined){
       this.message = message;
       return;
@@ -1219,6 +1305,10 @@ const main = () => {
         if(gBgm.paused){
           gBgm.play();
         }
+        if(gFieldMessage){
+          readFieldMessageEvent(event);
+          break;
+        }
         player.playerMoveEvent(event);
         break;
       case SCENE.battle:
@@ -1268,6 +1358,10 @@ const updateView = (player: Player): void => {
         popEnemy();
       }
       dispMoveMapScene(context, player);
+      if(gFieldMessage){
+        dispFieldMessageField(context);
+        dispFieldMessage(context);
+      }
       break;
     case SCENE.battle:
       if(!gBattle){
@@ -1370,7 +1464,9 @@ const dispCharactor = (context: CanvasRenderingContext2D, charactor: Charactor) 
     const color: string = charactor instanceof Enemy ? COLOR.red : COLOR.blue;
     drawDefaultCharactor(context, pos, charactor.getAngle(), color, size)
   }else{
+    context.globalAlpha = charactor instanceof Player && gBattleIgnoreFrame > gFrameCounter ? 0.5 : 1;
     context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * size.width, NODE_SIZE.height * size.height);
+//    context.globalAlpha = 1;
   }
 }
 
@@ -1414,6 +1510,64 @@ const drawDefaultCharactor = (context: CanvasRenderingContext2D, pos: Position, 
     default:
       break;
   }
+}
+
+const dispFieldMessage = (context: CanvasRenderingContext2D) => {
+  if(!gFieldMessage){
+    return;
+  }
+  context.fillStyle = COLOR.white;
+  context.fillText(
+    gFieldMessage,
+    NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left + BATTLE_TEXT_FIELD.padding.left),
+    NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.messageField.height - BATTLE_TEXT_FIELD.margin.bottom + BATTLE_TEXT_FIELD.padding.top + 1)
+  );
+}
+
+const dispFieldMessageField = (context: CanvasRenderingContext2D) => {
+  context.strokeStyle = COLOR.clear;
+  context.lineWidth = 0;
+  roundedRect(
+    context,
+    NODE_SIZE.width * (BATTLE_TEXT_FIELD.margin.left - 0.1),
+    NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom - 0.1),
+    NODE_SIZE.width * (BATTLE_TEXT_FIELD.messageField.width + 0.2),
+    NODE_SIZE.height * (BATTLE_TEXT_FIELD.messageField.height + 0.2),
+    NODE_SIZE.height / 2
+  );
+  context.fillStyle = COLOR.lightBlack;
+  context.fill();
+  context.strokeStyle = COLOR.white;
+  context.lineWidth = 2;
+  roundedRect(
+    context,
+    NODE_SIZE.width * BATTLE_TEXT_FIELD.margin.left,
+    NODE_SIZE.height * (FIELD_SIZE.y - BATTLE_TEXT_FIELD.commandField.height - BATTLE_TEXT_FIELD.margin.bottom),
+    NODE_SIZE.width * BATTLE_TEXT_FIELD.messageField.width,
+    NODE_SIZE.height * BATTLE_TEXT_FIELD.messageField.height,
+    NODE_SIZE.height / 2
+  );
+}
+
+const setFieldMessage = (message: string) => {
+  if(gFieldMessage === undefined){
+    gFieldMessage = message;
+    return;
+  }
+  gFieldMessageBuffer = gFieldMessageBuffer.concat(message);
+}
+
+const readFieldMessageEvent = (event: KeyboardEvent) => {
+  switch(event.key){
+    case 'Enter':
+      readFieldMessage();
+      break;
+  }
+}
+
+const readFieldMessage = (): boolean => {
+  gFieldMessage = gFieldMessageBuffer.shift();
+  return gFieldMessage === undefined;
 }
 
 const dispGameClearScene = (context: CanvasRenderingContext2D) => {
