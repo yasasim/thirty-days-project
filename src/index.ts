@@ -278,7 +278,7 @@ const ENEMY_A = {
 }
 
 const ENEMY_B = {
-  name: 'レアザコ',
+  name: 'ベチョマンテ',
   maxHp: 15,
   atack: 5,
   exp: 100,
@@ -292,7 +292,7 @@ const ENEMY_B = {
 }
 
 const ENEMY_C = {
-  name: 'ザコ',
+  name: 'ベチョマ',
   maxHp: 10,
   atack: 3,
   exp: 15,
@@ -328,6 +328,10 @@ const EVENT_ID = {
   cure: 1
 }
 
+const TIME = {
+  battleIgnore: 90
+}
+
 let gPressString: string = '';
 
 let gFrameCounter: number = 0;
@@ -350,7 +354,9 @@ let gEnemyId: number = 2;
 
 let gFieldMessage: string | undefined;
 
-let gFieldMessageBuffer: string[] = []
+let gFieldMessageBuffer: string[] = [];
+
+let gBattleIgnoreFrame: number = 0;
 
 const gMap = [
   1, 0, 0, 0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -544,8 +550,11 @@ const executeEvent = (eventId: number, player: Player) => {
 } 
 
 const startBattle = (player: Player, playerTo: Angle, enemyId: number, startByPlayer: boolean) => {
+  if(gBattleIgnoreFrame > gFrameCounter){
+    return;
+  }
   gScene = SCENE.battle;
-  const pos = getNextPos(player.getPos(), playerTo)
+  const pos = getNextPos(player.getPos(), playerTo);
   const index = gEnemys.findIndex((value) => {
     return value.getId() === enemyId
   });
@@ -1037,7 +1046,7 @@ class Battle {
         }
         break;
       case 1:
-        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape);
+        this.setMessage(BATTLE_COMMAND_EXECUTE_MESSAGE.escape.replace('NAME', this.player.getName()));
         this.battleEndType = BATTLE_END_TYPE.escape;
         break;
       case 2:
@@ -1067,7 +1076,7 @@ class Battle {
         this.battleEndEvent();
         break;
       case BATTLE_END_TYPE.lose:
-        this.setMessage(BATTLE_END_MESSAGE.lose)
+        this.setMessage(BATTLE_END_MESSAGE.lose.replace('NAME', this.player.getName()));
         this.battlePhese = BATTLE_PHASE.end;
         break;
       case BATTLE_END_TYPE.false:
@@ -1107,6 +1116,7 @@ class Battle {
         }
         break;
       case BATTLE_END_TYPE.escape:
+        gBattleIgnoreFrame = gFrameCounter + TIME.battleIgnore;
         gScene = SCENE.moveMap;
         break;
       case BATTLE_END_TYPE.lose:
@@ -1119,8 +1129,6 @@ class Battle {
   }
 
   private setMessage = (message: string) => {
-    console.log('set message');
-    console.log(message);
     if(this.message === undefined){
       this.message = message;
       return;
@@ -1430,7 +1438,9 @@ const dispCharactor = (context: CanvasRenderingContext2D, charactor: Charactor) 
     const color: string = charactor instanceof Enemy ? COLOR.red : COLOR.blue;
     drawDefaultCharactor(context, pos, charactor.getAngle(), color, size)
   }else{
+    context.globalAlpha = charactor instanceof Player && gBattleIgnoreFrame > gFrameCounter ? 0.5 : 1;
     context.drawImage(img, NODE_SIZE.width * pos.x, NODE_SIZE.height * pos.y, NODE_SIZE.width * size.width, NODE_SIZE.height * size.height);
+//    context.globalAlpha = 1;
   }
 }
 
