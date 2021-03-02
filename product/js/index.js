@@ -189,7 +189,7 @@ const AUDIO_PATH = {
     field: './audio/field.mp3'
 };
 const ENEMY_A = {
-    name: 'ラスボス',
+    name: 'クロキシ',
     maxHp: 50,
     atack: 7,
     exp: 100,
@@ -257,7 +257,7 @@ let gClearFrame = 0;
 const gUsableBattleCommand = [
     'たたかう',
     'にげる',
-    'ああああ'
+    'ほげ～～'
 ];
 const gEnemys = [];
 let gBattle = null;
