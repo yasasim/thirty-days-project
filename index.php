@@ -1,1 +1,3 @@
-<?php include_once("./product/index.html"); ?>
+<?php 
+  echo 'Hello World!';
+?>
