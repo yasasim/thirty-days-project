@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "npx tsc",
-    "start": "node index.js"
+    "build": "npx tsc"
   },
   "repository": "git+https://github.com/yasasim/thirty-days-project.git",
   "author": "yasasim",
