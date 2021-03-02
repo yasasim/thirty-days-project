@@ -1129,9 +1129,6 @@ const updateView = (player) => {
             dispGameOverScene(context);
             break;
     }
-    context.fillStyle = COLOR.black;
-    context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
-    context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 };
 const moveEnemys = (player) => {
     if (gFrameCounter % 15 !== 0) {

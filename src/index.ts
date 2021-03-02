@@ -1377,9 +1377,6 @@ const updateView = (player: Player): void => {
       break;
   }
 
-  context.fillStyle = COLOR.black;
-  context.fillText(`frame: ${gFrameCounter}`, 0, (FIELD_SIZE.y + 1) * NODE_SIZE.height);
-  context.fillText(gPressString, 0, (FIELD_SIZE.y + 2) * NODE_SIZE.height);
 }
 
 const moveEnemys = (player: Player) => {
