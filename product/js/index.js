@@ -149,16 +149,16 @@ const EXP_TABLE = [
 const MAX_LEVEL = 10;
 const ENEMY_IMAGE_PATH = {
     a: {
-        battle: '../image/enemyA.png',
+        battle: './image/enemyA.png',
         mini: {
             up: '',
-            down: '../image/castle.png',
+            down: './image/castle.png',
             right: '',
             left: '',
         }
     },
     b: {
-        battle: '../image/enemyB.png',
+        battle: './image/enemyB.png',
         mini: {
             up: '',
             down: '',
@@ -167,7 +167,7 @@ const ENEMY_IMAGE_PATH = {
         }
     },
     c: {
-        battle: '../image/enemyC.png',
+        battle: './image/enemyC.png',
         mini: {
             up: '',
             down: '',
@@ -179,14 +179,14 @@ const ENEMY_IMAGE_PATH = {
 const PLAYER_IMAGE_PATH = {
     battle: '',
     mini: {
-        up: '../image/playerUp.png',
-        down: '../image/playerDown.png',
-        right: '../image/playerRight.png',
-        left: '../image/playerLeft.png'
+        up: './image/playerUp.png',
+        down: './image/playerDown.png',
+        right: './image/playerRight.png',
+        left: './image/playerLeft.png'
     }
 };
 const AUDIO_PATH = {
-    field: '../audio/field.mp3'
+    field: './audio/field.mp3'
 };
 const ENEMY_A = {
     name: 'ラスボス',
@@ -1352,7 +1352,7 @@ const test = () => {
     context.fillStyle = COLOR.black;
     context.fillRect(0, 0, 1000, 1000);
     const img = new Image();
-    img.src = "../image/enemyA.png";
+    img.src = "./image/enemyA.png";
     img.onload = () => {
         context.drawImage(img, 0, 0);
     };
